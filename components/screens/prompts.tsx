@@ -1,21 +1,68 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { fetchPrompts, savePrompts } from '@/lib/client-storage';
 import { DOCS, LANGS, PROMPTS } from '@/lib/data';
 import type { LangCode, PromptEntry, PromptsMap } from '@/lib/types';
-import { IcCheck, IcDocs, IcHistory, IcPlay, IcPlus, IcSync } from '../icons';
+import { IcCheck, IcDocs, IcHistory, IcPlay, IcPlus, IcSync, IcX } from '../icons';
 import { LangChip } from '../primitives';
 
 type TargetLang = Exclude<LangCode, 'en'>;
+type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
 export const PromptsScreen = () => {
   const [active, setActive] = useState<TargetLang>('de');
   const [prompt, setPrompt] = useState<PromptsMap>(() => ({ ...PROMPTS }));
+  const [saved, setSaved] = useState<PromptsMap>(() => ({ ...PROMPTS }));
+  const [saveState, setSaveState] = useState<SaveState>('idle');
+  const [saveError, setSaveError] = useState<string | null>(null);
   const p = prompt[active]!;
   const lang = LANGS.find((l) => l.code === active)!;
 
+  // Hydrate from data/prompts.json on mount.
+  useEffect(() => {
+    let cancelled = false;
+    fetchPrompts()
+      .then((p) => {
+        if (cancelled) return;
+        setPrompt(p);
+        setSaved(p);
+      })
+      .catch(() => {
+        /* keep defaults on failure */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const update = <K extends keyof PromptEntry>(k: K, v: PromptEntry[K]) =>
     setPrompt((s) => ({ ...s, [active]: { ...(s[active] as PromptEntry), [k]: v } }));
+
+  // specialRules is stored on disk as string[] (one rule per item, preserving
+  // blank-string separators). The editor uses a single textarea where each
+  // line = one rule; we join/split on '\n' to round-trip.
+  const rulesText = p.specialRules.join('\n');
+  const setRulesText = (text: string) =>
+    update('specialRules', text.split('\n'));
+
+  const dirty = JSON.stringify(prompt) !== JSON.stringify(saved);
+
+  const onSave = async () => {
+    setSaveState('saving');
+    setSaveError(null);
+    try {
+      await savePrompts(prompt);
+      setSaved(prompt);
+      setSaveState('saved');
+      setTimeout(() => setSaveState((s) => (s === 'saved' ? 'idle' : s)), 2000);
+    } catch (e) {
+      setSaveState('error');
+      setSaveError(e instanceof Error ? e.message : 'Save failed');
+    }
+  };
+
+  const onDiscard = () => setPrompt(saved);
 
   const version = active === 'de' ? '12' : active === 'fr' ? '3' : '1';
 
@@ -82,17 +129,35 @@ export const PromptsScreen = () => {
             <span
               style={{
                 fontSize: 11,
-                color: 'var(--ink-4)',
+                color: saveState === 'error' ? 'var(--err)' : 'var(--ink-4)',
                 fontFamily: 'var(--mono)',
               }}
             >
-              Last edited 3h ago · Ida W.
+              {saveState === 'saving'
+                ? 'Saving…'
+                : saveState === 'saved'
+                ? 'Saved to data/prompts.json'
+                : saveState === 'error'
+                ? saveError ?? 'Save failed'
+                : dirty
+                ? 'Unsaved changes'
+                : 'Last edited 3h ago · Ida W.'}
             </span>
             <button className="btn">
               <IcHistory /> History
             </button>
-            <button className="btn">Discard</button>
-            <button className="btn primary">
+            <button
+              className="btn"
+              onClick={onDiscard}
+              disabled={!dirty || saveState === 'saving'}
+            >
+              Discard
+            </button>
+            <button
+              className="btn primary"
+              onClick={onSave}
+              disabled={!dirty || saveState === 'saving'}
+            >
               <IcCheck /> Save & publish
             </button>
           </div>
@@ -100,88 +165,58 @@ export const PromptsScreen = () => {
 
         <div className="prompt-body">
           <div className="prompt-main">
-            <div className="section-label">System prompt</div>
-            <textarea
-              className="prompt-ta"
-              value={p.system}
-              onChange={(e) => update('system', e.target.value)}
-              rows={18}
-            />
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
-              <span style={{ fontSize: 11, color: 'var(--ink-4)' }}>Insert variable:</span>
-              <div className="var-chips">
-                <span className="var-chip">{'{{source_text}}'}</span>
-                <span className="var-chip">{'{{field_name}}'}</span>
-                <span className="var-chip">{'{{doc_type}}'}</span>
-                <span className="var-chip">{'{{brand_voice}}'}</span>
-                <span className="var-chip">{'{{glossary}}'}</span>
-              </div>
-            </div>
-
-            <div className="section-label">Brand voice guidelines</div>
-            <textarea
-              className="ta brand"
-              value={p.brand}
-              onChange={(e) => update('brand', e.target.value)}
-              rows={5}
-            />
-
-            <div className="section-label">
-              Glossary (scoped to {lang.code.toUpperCase()})
-            </div>
-            <div style={{ border: '1px solid var(--line)', borderRadius: 6, overflow: 'hidden' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
-                <thead>
-                  <tr style={{ background: 'var(--bg-1)' }}>
-                    {['Source', lang.code.toUpperCase(), 'Rule', 'Notes'].map((h, i) => (
-                      <th
-                        key={i}
-                        style={{
-                          textAlign: i === 2 ? 'left' : 'left',
-                          padding: '8px 10px',
-                          fontSize: 10.5,
-                          fontWeight: 600,
-                          color: 'var(--ink-4)',
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.08em',
-                          borderBottom: '1px solid var(--line)',
-                          width: i === 2 ? 80 : undefined,
-                        }}
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {p.glossary.map((g, i) => (
-                    <tr key={i} style={{ borderBottom: '1px solid var(--line)' }}>
-                      <td style={{ padding: '8px 10px', fontWeight: 500 }}>{g.src}</td>
-                      <td style={{ padding: '8px 10px' }}>{g.target}</td>
-                      <td style={{ padding: '8px 10px' }}>
-                        <span className={`tag ${g.kind}`}>
-                          {g.kind === 'dnt' ? 'Do not translate' : 'Preferred'}
-                        </span>
-                      </td>
-                      <td style={{ padding: '8px 10px', color: 'var(--ink-3)' }}>
-                        {g.notes || <span style={{ color: 'var(--ink-4)' }}>—</span>}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <div
+            <div
+              className="section-label"
+              style={{ display: 'flex', alignItems: 'center', gap: 10 }}
+            >
+              <span>Special rules</span>
+              <span
                 style={{
-                  padding: 8,
-                  background: 'var(--bg-1)',
-                  borderTop: '1px solid var(--line)',
+                  fontSize: 10.5,
+                  color: 'var(--ink-4)',
+                  fontFamily: 'var(--mono)',
+                  textTransform: 'none',
+                  letterSpacing: 0,
                 }}
               >
-                <button className="btn sm ghost">
-                  <IcPlus size={11} /> Add term
-                </button>
-                <button className="btn sm ghost">Open shared glossary →</button>
-              </div>
+                {p.specialRules.length} rule{p.specialRules.length === 1 ? '' : 's'} ·
+                one per line · blank lines are preserved
+              </span>
+            </div>
+            <textarea
+              className="prompt-ta"
+              value={rulesText}
+              onChange={(e) => setRulesText(e.target.value)}
+              rows={28}
+              spellCheck={false}
+              style={{ fontFamily: 'var(--mono)', fontSize: 12.5, lineHeight: 1.55 }}
+              placeholder={
+                p.specialRules.length === 0
+                  ? `No rules yet for ${lang.label}. Add one rule per line — e.g.\nTARGET LANGUAGE: ${lang.label}.\n- Keep brand and collection names in English.`
+                  : undefined
+              }
+            />
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                marginTop: 8,
+              }}
+            >
+              <button
+                className="btn sm ghost"
+                onClick={() => update('specialRules', [...p.specialRules, ''])}
+              >
+                <IcPlus size={11} /> Append blank line
+              </button>
+              <button
+                className="btn sm ghost"
+                onClick={() => update('specialRules', [])}
+                disabled={p.specialRules.length === 0}
+              >
+                <IcX size={11} /> Clear all
+              </button>
             </div>
           </div>
 

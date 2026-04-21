@@ -1,3 +1,4 @@
+import { PROTECTED_GLOSSARY } from './protected-terms';
 import type {
   DocRecord,
   GlossaryRow,
@@ -323,83 +324,11 @@ export const SAMPLE_DOC: SampleDoc = {
   ],
 };
 
+// SSR fallback. Real content lives in data/prompts.json and is fetched on mount.
 export const PROMPTS: PromptsMap = {
-  de: {
-    system: `You are a senior in-house translator for Pas Normal Studios, translating from English (source) into German (DE-DE).
-
-Voice guardrails:
-- Understated, confident, quietly technical. Never hype, never "push your limits".
-- Keep sentences short. Prefer concrete nouns. Avoid adjective stacking.
-- Address the reader informally ("du"), but never casually enough to sound slangy.
-
-Hard rules:
-- Do NOT translate product names, collection names, colorway names, or material trademarks (see glossary).
-- Preserve all inline formatting, Portable Text marks, and slugs exactly.
-- If {{source_text}} is empty, return empty — never invent copy.
-- Measurements: keep metric. Prices: keep source currency code, do not convert.
-
-Input variables:
-- field: {{field_name}}
-- document type: {{doc_type}}
-- source language: English
-- target: German (DE-DE)
-
-Respond with the translated text only. No preface, no explanation.`,
-    brand: `Pas Normal Studios makes cycling apparel for riders who treat the sport with seriousness. The German-speaking customer is informed, technical, and allergic to marketing language. Translate like you are writing a well-made catalogue, not a Facebook ad.`,
-    glossary: [
-      { src: 'Mechanism Pro', target: 'Mechanism Pro', kind: 'dnt', notes: 'Product line — never translate' },
-      { src: 'Escapism', target: 'Escapism', kind: 'dnt', notes: 'Collection name' },
-      { src: 'bib shorts', target: 'Trägerhose', kind: 'brand', notes: 'Preferred over "Radhose mit Trägern"' },
-      { src: 'jersey', target: 'Trikot', kind: 'brand' },
-      { src: 'ride', target: 'Fahrt', kind: 'brand', notes: 'Not "Ausfahrt" — too formal' },
-    ],
-  },
-  fr: {
-    system: `You are a senior in-house translator for Pas Normal Studios, translating from English (source) into French (FR-FR).
-
-Voice guardrails:
-- Sober, precise, technical. Avoid "inspirational" language.
-- Use the informal "tu" for marketing copy; "vous" only for legal / support surfaces.
-- Do not over-translate: if the English is terse, the French should be terse.
-
-Hard rules:
-- Do NOT translate product names, collection names, colorway names.
-- Preserve formatting, Portable Text marks, and slugs exactly.
-- Keep metric. Keep source currency codes.
-
-Variables: field={{field_name}}, type={{doc_type}}, source=English, target=French (FR-FR).
-Respond with translated text only.`,
-    brand: `The French-speaking rider expects precision and good French — not a literal transposition from English. Read the sentence, understand it, then write it in idiomatic French the way the brand would.`,
-    glossary: [
-      { src: 'Mechanism Pro', target: 'Mechanism Pro', kind: 'dnt' },
-      { src: 'bib shorts', target: 'cuissard à bretelles', kind: 'brand' },
-      { src: 'jersey', target: 'maillot', kind: 'brand' },
-      { src: 'ride', target: 'sortie', kind: 'brand', notes: '"Run" in English-French — avoid' },
-    ],
-  },
-  it: {
-    system: `You are a senior in-house translator for Pas Normal Studios, translating from English (source) into Italian (IT-IT).
-
-Voice guardrails:
-- Direct, grounded, technical. Italian cycling culture is old and informed — write like you know it.
-- Use "tu" for marketing copy.
-- Short sentences are fine. Do not add flourishes the English does not have.
-
-Hard rules:
-- Do NOT translate product names, collection names, colorway names.
-- Preserve formatting and slugs.
-- Keep metric units.
-
-Variables: field={{field_name}}, type={{doc_type}}, source=English, target=Italian (IT-IT).
-Respond with translated text only.`,
-    brand: `Italian riders recognise the vocabulary of their sport. Use it. Avoid anglicisms where a good Italian term exists — but keep anglicisms that the cycling world actually uses ("gravel", "road").`,
-    glossary: [
-      { src: 'Mechanism Pro', target: 'Mechanism Pro', kind: 'dnt' },
-      { src: 'bib shorts', target: 'salopette', kind: 'brand' },
-      { src: 'jersey', target: 'maglia', kind: 'brand' },
-      { src: 'ride', target: 'uscita', kind: 'brand' },
-    ],
-  },
+  de: { specialRules: [] },
+  fr: { specialRules: [] },
+  it: { specialRules: [] },
 };
 
 export const JOBS: JobRecord[] = [
@@ -489,20 +418,9 @@ export const JOBS: JobRecord[] = [
   },
 ];
 
-export const GLOSSARY: GlossaryRow[] = [
-  { src: 'Mechanism Pro', de: 'Mechanism Pro', fr: 'Mechanism Pro', it: 'Mechanism Pro', kind: 'dnt', scope: 'All', notes: 'Product line' },
-  { src: 'Escapism', de: 'Escapism', fr: 'Escapism', it: 'Escapism', kind: 'dnt', scope: 'All', notes: 'Collection' },
-  { src: 'Balance', de: 'Balance', fr: 'Balance', it: 'Balance', kind: 'dnt', scope: 'All', notes: 'Collection' },
-  { src: 'Pas Normal Studios', de: 'Pas Normal Studios', fr: 'Pas Normal Studios', it: 'Pas Normal Studios', kind: 'dnt', scope: 'All' },
-  { src: 'bib shorts', de: 'Trägerhose', fr: 'cuissard à bretelles', it: 'salopette', kind: 'brand', scope: 'Product' },
-  { src: 'jersey', de: 'Trikot', fr: 'maillot', it: 'maglia', kind: 'brand', scope: 'Product' },
-  { src: 'base layer', de: 'Unterhemd', fr: 'sous-maillot', it: 'intimo tecnico', kind: 'brand', scope: 'Product' },
-  { src: 'gilet', de: 'Weste', fr: 'gilet', it: 'gilet', kind: 'brand', scope: 'Product' },
-  { src: 'ride (noun)', de: 'Fahrt', fr: 'sortie', it: 'uscita', kind: 'brand', scope: 'Editorial' },
-  { src: 'long day', de: 'langer Tag', fr: 'longue journée', it: 'giornata lunga', kind: 'brand', scope: 'Editorial' },
-  { src: 'race-cut', de: 'Race-Schnitt', fr: 'coupe course', it: 'taglio racing', kind: 'brand', scope: 'Product' },
-  { src: 'YKK camlock', de: 'YKK Camlock', fr: 'YKK camlock', it: 'YKK camlock', kind: 'dnt', scope: 'All', notes: 'Trademark' },
-];
+// Initial glossary shown on first paint (SSR-safe). The client fetches
+// /api/glossary on mount to merge any user-added entries.
+export const GLOSSARY: GlossaryRow[] = PROTECTED_GLOSSARY;
 
 export const TYPE_LABELS: Record<string, string> = {
   product: 'Product',

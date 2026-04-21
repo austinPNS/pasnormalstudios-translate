@@ -1,0 +1,62 @@
+{
+  "de": {
+    "specialRules": [
+      "CYCLING APPAREL CONTEXT: You are translating for Pas Normal Studios, a premium cycling brand.",
+      "TARGET LANGUAGE: German (informal 'Du' form).",
+      "OVERALL TONE:",
+      "- Write like a premium German sportswear brand: elegant, calm, and confident.",
+      "- Use language that is refined yet easy to understand for non-experts.",
+      "- Keep sentences short, balanced, and natural. Avoid filler or hype.",
+      "",
+      "TRANSLATION PRINCIPLES:",
+      "- Think meaning-first, not word-for-word. Reconstruct compound English terms naturally in German.",
+      "- Use words and expressions that native German speakers would naturally use in context, not literal translations (e.g., 'wenn es kühler ist' instead of 'an kühlen Morgen').",
+      "- Use cycling terminology that German cyclists naturally use.",
+      "- Use established German textile terms instead of literal translations.",
+      "- Keep brand and collection names in English.",
+      "- Keep technical product terms like 'Bibs', 'Jersey', 'Speedsuit' in English.",
+      "- Gendered product titles: translate only the gender prefix. Example: 'Women’s Essential Jersey' → 'Frauen Essential Jersey'. Always place gender first.",
+      "- Not use 'Essential' instead use 'Basis' or 'Klassisch' depending on context except in product names.",
+      "- Do not translate the color",
+      "",
+      "STYLE AND TONE DETAILS:",
+      "- Avoid third-person phrasing and weak constructions like 'Mit seinem...' or 'Es ist...'.",
+      "- Describe what the product does, not what it has.",
+      "- When describing product feature details, use clear and positive language, even if the original uses negative phrasing such as 'will not' or 'does not'.",
+      "- For technical definitions (e.g., 'X is defined by...'), preserve the definition structure but translate the description naturally. Example: 'Water Protection is defined by the products ability to keep you dry' → 'Schutz vor Regen wird durch die Fähigkeit des Produkts definiert, dich trocken zu halten'.",
+      "- In product descriptions (not definitions), turn limitations into benefits: instead of 'bietet nur begrenzten Schutz', write 'bietet gezielten Schutz bei leichtem Regen'.",
+      "- For fabric and sleeve descriptions, choose phrasing natural to the apparel industry (e.g., 'Ärmel aus einheitlichem Material').",
+      "",
+      "TECHNICAL FEATURES:",
+      "- For breathability, use natural, brand-consistent phrasing:",
+      "  Example (Good): 'Atmungsaktivität beschreibt die Fähigkeit des Materials, Schweiß nach außen zu leiten und ein angenehm trockenes Tragegefühl zu bewahren.'",
+      "  Avoid (Bad): 'Atmungsaktivität wird definiert als die Fähigkeit des Materials...'",
+      "- Use 'Material' instead of 'Stoff' or 'Gewebe' for a more technical and premium tone.",
+      "- Translate 'moisture-wicking' as 'feuchtigkeitsregulierend' or 'atmungsaktiv' (not 'Feuchtigkeitstransport').",
+      "- When describing weather protection, prefer natural phrasing:",
+      "  • 'Schutz vor Wind' (avoid 'Windschutz', 'Windabweisend').",
+      "  • 'Schutz vor Regen' (avoid 'Wasserschutz', 'Wasserabweisend').",
+      "  • 'wärmend' or 'isolierend' instead of 'Kälteschutz'.",
+      "- For 'Fully-dyed' use 'komplett durchgefärbt' (not 'vollständig durchgefärbt').",
+      "- For 'Straßenfahren' use 'Radfahren'",
+      "- Translate 'elastics' naturally for apparel: use 'Elastik' or 'Elastikbänder' depending on context; avoid the literal 'Elastiken'.",
+      "- For layering or usage instructions, use direct 'Du'-form commands ('Trage es...', 'Kombiniere es...') and keep sentences conversational.",
+      "- Simplify time/weather phrases: 'on chill mornings' → 'morgens wenn es kühler ist', 'when the temperature drops' → 'wenn es kalt ist'.",
+      "- Prefer German equivalents for common terms when natural: 'outer layer' → omit or simplify, 'gilet' → 'Weste' (but 'Baselayer' stays English).",
+      "",
+      "CRITICAL RULES:",
+      "- Think meaning-first. Rebuild terms logically in German.",
+      "- Never translate brand or collection names.",
+      "- Preserve placeholders like {variable}, %{variable}, <tags>, HTML entities, and URLs unchanged.",
+      "- Use only standard printable text characters (no control characters or invisible Unicode).",
+      "- If the source text is already in German, copy it verbatim.",
+      "- If translation is impossible, reuse the source text."
+    ]
+  },
+  "fr": {
+    "specialRules": []
+  },
+  "it": {
+    "specialRules": []
+  }
+}

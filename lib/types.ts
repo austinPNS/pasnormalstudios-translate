@@ -60,17 +60,8 @@ export interface SampleDoc {
   blocks: Block[];
 }
 
-export interface PromptGlossaryTerm {
-  src: string;
-  target: string;
-  kind: 'dnt' | 'brand';
-  notes?: string;
-}
-
 export interface PromptEntry {
-  system: string;
-  brand: string;
-  glossary: PromptGlossaryTerm[];
+  specialRules: string[];
 }
 
 export type PromptsMap = Partial<Record<Exclude<LangCode, 'en'>, PromptEntry>>;
