@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { DOCS, LANGS } from '@/lib/data';
+import { LANGS } from '@/lib/data';
 import type { DocRecord, LangCode, Tweaks } from '@/lib/types';
 import {
   IcArrow,
@@ -24,15 +24,18 @@ import {
 
 interface Props {
   layout: Tweaks['layout'];
+  docs: DocRecord[];
+  loading: boolean;
+  error: string | null;
   onOpenDoc: (id: string) => void;
   onBulk: (ids: string[]) => void;
 }
 
-type Filter = 'all' | 'missing' | 'review' | 'stale';
+type Filter = 'product' | 'uberProduct' | 'feature' | 'frontpage';
 
-export const DocumentsScreen = ({ layout, onOpenDoc, onBulk }: Props) => {
+export const DocumentsScreen = ({ layout, docs, loading, error, onOpenDoc, onBulk }: Props) => {
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [filter, setFilter] = useState<Filter>('all');
+  const [filter, setFilter] = useState<Filter>('product');
   const [search, setSearch] = useState('');
 
   const toggle = (id: string) => {
@@ -41,18 +44,14 @@ export const DocumentsScreen = ({ layout, onOpenDoc, onBulk }: Props) => {
     setSelected(n);
   };
   const toggleAll = () => {
-    if (selected.size === DOCS.length) setSelected(new Set());
-    else setSelected(new Set(DOCS.map((d) => d.id)));
+    if (selected.size === docs.length) setSelected(new Set());
+    else setSelected(new Set(docs.map((d) => d.id)));
   };
 
-  const filtered = DOCS.filter((d) => {
+  const filtered = docs.filter((d) => {
     if (search && !d.title.toLowerCase().includes(search.toLowerCase())) return false;
-    if (filter === 'all') return true;
-    if (filter === 'missing') return Object.values(d.langs).some((l) => l.status === 'none');
-    if (filter === 'review') return Object.values(d.langs).some((l) => l.status === 'review');
-    if (filter === 'stale')
-      return Object.values(d.langs).some((l) => l.status === 'stale' || l.status === 'error');
-    return true;
+    if (!Object.values(d.langs).some((l) => l.status === 'none')) return false;
+    return d.type === filter;
   });
 
   return (
@@ -60,7 +59,9 @@ export const DocumentsScreen = ({ layout, onOpenDoc, onBulk }: Props) => {
       <div className="page-head">
         <div>
           <h1 className="h1">Documents</h1>
-          <div className="sub">{DOCS.length} documents · 4 languages · source EN</div>
+          <div className="sub">
+            {loading ? 'Loading…' : `${docs.length} documents · 4 languages · source EN`}
+          </div>
         </div>
         <div className="spacer" />
         <div className="page-actions">
@@ -90,10 +91,10 @@ export const DocumentsScreen = ({ layout, onOpenDoc, onBulk }: Props) => {
             value={filter}
             onChange={setFilter}
             options={[
-              { v: 'all', label: 'All' },
-              { v: 'missing', label: 'Missing' },
-              { v: 'review', label: 'Needs review' },
-              { v: 'stale', label: 'Out of sync' },
+              { v: 'product', label: 'Product' },
+              { v: 'uberProduct', label: 'Uber Product' },
+              { v: 'feature', label: 'Product Feature' },
+              { v: 'frontpage', label: 'Front page' },
             ]}
           />
         </div>
@@ -108,6 +109,22 @@ export const DocumentsScreen = ({ layout, onOpenDoc, onBulk }: Props) => {
           <IcSliders /> Columns
         </button>
       </div>
+
+      {error && (
+        <div
+          style={{
+            margin: '0 24px 16px',
+            padding: '12px 14px',
+            border: '1px solid var(--line)',
+            borderRadius: 6,
+            fontSize: 12.5,
+            color: 'var(--ink-3)',
+            fontFamily: 'var(--mono)',
+          }}
+        >
+          Failed to load documents: {error}
+        </div>
+      )}
 
       {layout === 'matrix' && (
         <DocsMatrix

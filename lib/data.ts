@@ -1,6 +1,5 @@
 import { PROTECTED_GLOSSARY } from './protected-terms';
 import type {
-  DocRecord,
   GlossaryRow,
   JobRecord,
   Lang,
@@ -13,191 +12,6 @@ export const LANGS: Lang[] = [
   { code: 'de', label: 'German', region: 'DE-DE' },
   { code: 'fr', label: 'French', region: 'FR-FR' },
   { code: 'it', label: 'Italian', region: 'IT-IT' },
-];
-
-export const DOCS: DocRecord[] = [
-  {
-    id: 'prod-mechanism-pro-jersey',
-    title: 'Mechanism Pro Jersey — Men',
-    type: 'product',
-    updated: '2d ago',
-    author: 'Ida W.',
-    langs: {
-      en: { status: 'approved', pct: 100 },
-      de: { status: 'approved', pct: 100 },
-      fr: { status: 'review', pct: 92 },
-      it: { status: 'progress', pct: 64 },
-    },
-  },
-  {
-    id: 'prod-essential-bib',
-    title: 'Essential Bib Shorts — Women',
-    type: 'product',
-    updated: '4h ago',
-    author: 'Ida W.',
-    langs: {
-      en: { status: 'approved', pct: 100 },
-      de: { status: 'stale', pct: 100 },
-      fr: { status: 'none', pct: 0 },
-      it: { status: 'none', pct: 0 },
-    },
-  },
-  {
-    id: 'prod-mid-layer-jacket',
-    title: 'Mid-Layer Thermal Jacket',
-    type: 'product',
-    updated: 'yesterday',
-    author: 'Theo B.',
-    langs: {
-      en: { status: 'approved', pct: 100 },
-      de: { status: 'approved', pct: 100 },
-      fr: { status: 'approved', pct: 100 },
-      it: { status: 'review', pct: 100 },
-    },
-  },
-  {
-    id: 'prod-escapism-gilet',
-    title: 'Escapism Gilet',
-    type: 'product',
-    updated: '5d ago',
-    author: 'Ida W.',
-    langs: {
-      en: { status: 'approved', pct: 100 },
-      de: { status: 'approved', pct: 100 },
-      fr: { status: 'progress', pct: 48 },
-      it: { status: 'none', pct: 0 },
-    },
-  },
-  {
-    id: 'prod-off-race-cap',
-    title: 'Off-Race Cap',
-    type: 'product',
-    updated: '3d ago',
-    author: 'Mika L.',
-    langs: {
-      en: { status: 'approved', pct: 100 },
-      de: { status: 'approved', pct: 100 },
-      fr: { status: 'none', pct: 0 },
-      it: { status: 'none', pct: 0 },
-    },
-  },
-  {
-    id: 'col-spring-racing',
-    title: 'Spring Racing Collection SS26',
-    type: 'collection',
-    updated: '1d ago',
-    author: 'Theo B.',
-    langs: {
-      en: { status: 'approved', pct: 100 },
-      de: { status: 'review', pct: 100 },
-      fr: { status: 'progress', pct: 71 },
-      it: { status: 'progress', pct: 22 },
-    },
-  },
-  {
-    id: 'col-all-weather',
-    title: 'All-Weather Essentials',
-    type: 'collection',
-    updated: '2w ago',
-    author: 'Ida W.',
-    langs: {
-      en: { status: 'approved', pct: 100 },
-      de: { status: 'approved', pct: 100 },
-      fr: { status: 'none', pct: 0 },
-      it: { status: 'none', pct: 0 },
-    },
-  },
-  {
-    id: 'cat-men-bibs',
-    title: 'Men / Bibs & Shorts',
-    type: 'category',
-    updated: '6d ago',
-    author: 'Mika L.',
-    langs: {
-      en: { status: 'approved', pct: 100 },
-      de: { status: 'approved', pct: 100 },
-      fr: { status: 'approved', pct: 100 },
-      it: { status: 'review', pct: 100 },
-    },
-  },
-  {
-    id: 'cat-women-jerseys',
-    title: 'Women / Jerseys',
-    type: 'category',
-    updated: '6d ago',
-    author: 'Mika L.',
-    langs: {
-      en: { status: 'approved', pct: 100 },
-      de: { status: 'approved', pct: 100 },
-      fr: { status: 'progress', pct: 40 },
-      it: { status: 'none', pct: 0 },
-    },
-  },
-  {
-    id: 'feat-sustainability',
-    title: 'Materials & Sustainability',
-    type: 'feature',
-    updated: '3w ago',
-    author: 'Ida W.',
-    langs: {
-      en: { status: 'approved', pct: 100 },
-      de: { status: 'stale', pct: 100 },
-      fr: { status: 'none', pct: 0 },
-      it: { status: 'none', pct: 0 },
-    },
-  },
-  {
-    id: 'feat-fit-guide',
-    title: 'Fit Guide: Race vs. Mechanism',
-    type: 'feature',
-    updated: '1w ago',
-    author: 'Theo B.',
-    langs: {
-      en: { status: 'approved', pct: 100 },
-      de: { status: 'approved', pct: 100 },
-      fr: { status: 'review', pct: 100 },
-      it: { status: 'progress', pct: 35 },
-    },
-  },
-  {
-    id: 'front-homepage',
-    title: 'Frontpage — Global',
-    type: 'frontpage',
-    updated: '3h ago',
-    author: 'Theo B.',
-    langs: {
-      en: { status: 'approved', pct: 100 },
-      de: { status: 'progress', pct: 80 },
-      fr: { status: 'none', pct: 0 },
-      it: { status: 'none', pct: 0 },
-    },
-  },
-  {
-    id: 'block-hero-ss26',
-    title: 'Hero Block — SS26 Launch',
-    type: 'block',
-    updated: '8h ago',
-    author: 'Mika L.',
-    langs: {
-      en: { status: 'approved', pct: 100 },
-      de: { status: 'review', pct: 100 },
-      fr: { status: 'progress', pct: 55 },
-      it: { status: 'none', pct: 0 },
-    },
-  },
-  {
-    id: 'block-editorial-grid',
-    title: 'Editorial Grid — Off Season',
-    type: 'block',
-    updated: '2d ago',
-    author: 'Ida W.',
-    langs: {
-      en: { status: 'approved', pct: 100 },
-      de: { status: 'error', pct: 60 },
-      fr: { status: 'none', pct: 0 },
-      it: { status: 'none', pct: 0 },
-    },
-  },
 ];
 
 export const SAMPLE_DOC: SampleDoc = {
@@ -424,10 +238,11 @@ export const GLOSSARY: GlossaryRow[] = PROTECTED_GLOSSARY;
 
 export const TYPE_LABELS: Record<string, string> = {
   product: 'Product',
+  uberProduct: 'Uber Product',
   collection: 'Collection',
   category: 'Category',
-  feature: 'Feature',
-  frontpage: 'Frontpage',
+  feature: 'Product Feature',
+  frontpage: 'Front page',
   block: 'Block',
 };
 

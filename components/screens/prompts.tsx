@@ -2,15 +2,19 @@
 
 import { useEffect, useState } from 'react';
 import { fetchPrompts, savePrompts } from '@/lib/client-storage';
-import { DOCS, LANGS, PROMPTS } from '@/lib/data';
-import type { LangCode, PromptEntry, PromptsMap } from '@/lib/types';
+import { LANGS, PROMPTS } from '@/lib/data';
+import type { DocRecord, LangCode, PromptEntry, PromptsMap } from '@/lib/types';
 import { IcCheck, IcDocs, IcHistory, IcPlay, IcPlus, IcSync, IcX } from '../icons';
 import { LangChip } from '../primitives';
 
 type TargetLang = Exclude<LangCode, 'en'>;
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
-export const PromptsScreen = () => {
+interface Props {
+  docs: DocRecord[];
+}
+
+export const PromptsScreen = ({ docs }: Props) => {
   const [active, setActive] = useState<TargetLang>('de');
   const [prompt, setPrompt] = useState<PromptsMap>(() => ({ ...PROMPTS }));
   const [saved, setSaved] = useState<PromptsMap>(() => ({ ...PROMPTS }));
@@ -299,7 +303,7 @@ export const PromptsScreen = () => {
             <div style={{ fontSize: 12, color: 'var(--ink-3)', lineHeight: 1.6 }}>
               <div>
                 —{' '}
-                {DOCS.filter((d) => d.langs[active].status !== 'approved').length} documents
+                {docs.filter((d) => d.langs[active].status !== 'approved').length} documents
                 currently out-of-date
               </div>
               <div>

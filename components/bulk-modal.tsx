@@ -1,18 +1,19 @@
 'use client';
 
 import { useState } from 'react';
-import { DOCS, LANGS } from '@/lib/data';
-import type { LangCode } from '@/lib/types';
+import { LANGS } from '@/lib/data';
+import type { DocRecord, LangCode } from '@/lib/types';
 import { IcPlay, IcX } from './icons';
 import { Check, DocTypeBadge, LangChip, Switch } from './primitives';
 
 interface Props {
   initialSel: string[];
+  docs: DocRecord[];
   onClose: () => void;
   onSubmit: () => void;
 }
 
-export const BulkModal = ({ initialSel, onClose, onSubmit }: Props) => {
+export const BulkModal = ({ initialSel, docs, onClose, onSubmit }: Props) => {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [sel, setSel] = useState<Set<string>>(new Set(initialSel));
   const [targets, setTargets] = useState<Set<LangCode>>(new Set<LangCode>(['fr', 'it']));
@@ -58,7 +59,7 @@ export const BulkModal = ({ initialSel, onClose, onSubmit }: Props) => {
           {step === 1 && (
             <>
               <div style={{ fontSize: 12.5, color: 'var(--ink-3)', marginBottom: 10 }}>
-                {sel.size} of {DOCS.length} selected
+                {sel.size} of {docs.length} selected
               </div>
               <div
                 style={{
@@ -68,7 +69,7 @@ export const BulkModal = ({ initialSel, onClose, onSubmit }: Props) => {
                   overflow: 'auto',
                 }}
               >
-                {DOCS.map((d) => (
+                {docs.map((d) => (
                   <div
                     key={d.id}
                     onClick={() => toggleDoc(d.id)}

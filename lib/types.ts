@@ -2,7 +2,14 @@ export type Status = 'none' | 'progress' | 'review' | 'approved' | 'stale' | 'er
 
 export type LangCode = 'en' | 'de' | 'fr' | 'it';
 
-export type DocType = 'product' | 'collection' | 'category' | 'feature' | 'frontpage' | 'block';
+export type DocType =
+  | 'product'
+  | 'uberProduct'
+  | 'collection'
+  | 'category'
+  | 'feature'
+  | 'frontpage'
+  | 'block';
 
 export interface Lang {
   code: LangCode;

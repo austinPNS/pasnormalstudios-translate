@@ -12,8 +12,9 @@ import { SettingsScreen } from '@/components/screens/settings';
 import { ViewerScreen } from '@/components/screens/viewer';
 import { Sidebar, TopNav, type Route } from '@/components/sidebar';
 import { TweaksPanel } from '@/components/tweaks-panel';
-import { DOCS, GLOSSARY, JOBS, SAMPLE_DOC, TWEAK_DEFAULTS } from '@/lib/data';
-import type { LangCode, Tweaks } from '@/lib/types';
+import { fetchDocuments } from '@/lib/client-storage';
+import { GLOSSARY, JOBS, SAMPLE_DOC, TWEAK_DEFAULTS } from '@/lib/data';
+import type { DocRecord, LangCode, Tweaks } from '@/lib/types';
 
 const isRoute = (v: string): v is Route =>
   ['documents', 'viewer', 'prompts', 'jobs', 'glossary', 'settings'].includes(v);
@@ -26,6 +27,29 @@ export default function App() {
   const [bulkInitial, setBulkInitial] = useState<string[]>([]);
   const [tweaks, setTweaks] = useState<Tweaks>(TWEAK_DEFAULTS);
   const [editActive, setEditActive] = useState(false);
+  const [docs, setDocs] = useState<DocRecord[]>([]);
+  const [docsLoading, setDocsLoading] = useState(true);
+  const [docsError, setDocsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchDocuments()
+      .then((d) => {
+        if (cancelled) return;
+        setDocs(d);
+        setDocsError(null);
+      })
+      .catch((e: unknown) => {
+        if (cancelled) return;
+        setDocsError(e instanceof Error ? e.message : 'Unknown error');
+      })
+      .finally(() => {
+        if (!cancelled) setDocsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Restore persisted state from localStorage after mount (avoid SSR mismatch).
   useEffect(() => {
@@ -63,7 +87,7 @@ export default function App() {
   }, [tweaks]);
 
   const counts = {
-    docs: DOCS.length,
+    docs: docs.length,
     jobs: JOBS.filter((j) => j.status === 'progress' || j.status === 'review').length,
     glossary: GLOSSARY.length,
   };
@@ -84,7 +108,14 @@ export default function App() {
   const renderMain = () => {
     if (route === 'documents')
       return (
-        <DocumentsScreen layout={tweaks.layout} onOpenDoc={openDoc} onBulk={bulk} />
+        <DocumentsScreen
+          layout={tweaks.layout}
+          docs={docs}
+          loading={docsLoading}
+          error={docsError}
+          onOpenDoc={openDoc}
+          onBulk={bulk}
+        />
       );
     if (route === 'viewer')
       return (
@@ -97,7 +128,7 @@ export default function App() {
           onBack={back}
         />
       );
-    if (route === 'prompts') return <PromptsScreen />;
+    if (route === 'prompts') return <PromptsScreen docs={docs} />;
     if (route === 'jobs') return <JobsScreen />;
     if (route === 'glossary') return <GlossaryScreen />;
     if (route === 'settings') return <SettingsScreen />;
@@ -175,6 +206,7 @@ export default function App() {
       {bulkOpen && (
         <BulkModal
           initialSel={bulkInitial}
+          docs={docs}
           onClose={() => setBulkOpen(false)}
           onSubmit={() => {
             setBulkOpen(false);
