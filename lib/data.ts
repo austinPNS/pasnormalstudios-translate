@@ -1,5 +1,7 @@
 import { PROTECTED_GLOSSARY } from './protected-terms';
 import type {
+  FreeTextHistoryItem,
+  FreeTextPreset,
   GlossaryRow,
   JobRecord,
   Lang,
@@ -235,6 +237,103 @@ export const JOBS: JobRecord[] = [
 // Initial glossary shown on first paint (SSR-safe). The client fetches
 // /api/glossary on mount to merge any user-added entries.
 export const GLOSSARY: GlossaryRow[] = PROTECTED_GLOSSARY;
+
+export const FREE_TEXT_PRESETS: FreeTextPreset[] = [
+  {
+    id: 'launch-cta',
+    label: 'Launch CTA',
+    sourceText:
+      'Mechanism Pro Jersey is back in Dark Olive. Lightweight race fit, breathable mesh back panel, and made in Italy.',
+    outputs: {
+      de: 'Das Mechanism Pro Jersey ist zurück in Dark Olive. Leichte Race-Passform, atmungsaktives Mesh-Rückenteil und hergestellt in Italien.',
+      fr: 'Le Mechanism Pro Jersey est de retour en Dark Olive. Coupe course légère, panneau dos respirant en mesh, fabriqué en Italie.',
+      it: 'La Mechanism Pro Jersey torna in Dark Olive. Vestibilità race leggera, pannello posteriore in mesh traspirante e realizzata in Italia.',
+    },
+    tone: 'Product marketing',
+    glossaryHits: ['Mechanism Pro Jersey', 'Dark Olive'],
+    rules: [
+      'Keep product names in English.',
+      'Keep colorway names unchanged.',
+      'Preserve concise premium tone.',
+    ],
+  },
+  {
+    id: 'support-reply',
+    label: 'Support reply',
+    sourceText:
+      'Thanks for reaching out. Your order is packed and will leave our warehouse within 1 business day.',
+    outputs: {
+      de: 'Vielen Dank fur Ihre Nachricht. Ihre Bestellung ist verpackt und verlasst unser Lager innerhalb eines Werktags.',
+      fr: 'Merci pour votre message. Votre commande est preparee et quittera notre entrepot sous 1 jour ouvrable.',
+      it: 'Grazie per averci contattato. Il tuo ordine e pronto e lascera il nostro magazzino entro 1 giorno lavorativo.',
+    },
+    tone: 'Customer support',
+    glossaryHits: [],
+    rules: [
+      'Keep tone calm and helpful.',
+      'Do not over-localize logistics wording.',
+    ],
+  },
+  {
+    id: 'campaign-copy',
+    label: 'Campaign copy',
+    sourceText:
+      'For long training days and hard efforts, the Escapism collection balances durability, comfort, and a relaxed silhouette.',
+    outputs: {
+      de: 'Fur lange Trainingstage und harte Belastungen balanciert die Escapism Kollektion Haltbarkeit, Komfort und eine entspannte Silhouette.',
+      fr: 'Pour les longues journees d entrainement et les efforts soutenus, la collection Escapism equilibre durabilite, confort et silhouette decontractee.',
+      it: 'Per le lunghe giornate di allenamento e gli sforzi intensi, la collezione Escapism bilancia resistenza, comfort e una silhouette rilassata.',
+    },
+    tone: 'Campaign',
+    glossaryHits: ['Escapism'],
+    rules: [
+      'Keep collection names in English.',
+      'Use natural retail language, not literal phrasing.',
+    ],
+  },
+];
+
+export const FREE_TEXT_HISTORY: FreeTextHistoryItem[] = [
+  {
+    id: 'ft_001',
+    sourceLang: 'en',
+    targetLang: 'de',
+    sourceText:
+      'Mechanism Pro Jersey is back in Dark Olive for early spring training blocks.',
+    outputText:
+      'Das Mechanism Pro Jersey ist fur die ersten Trainingsblocke im Fruhjahr wieder in Dark Olive verfugbar.',
+    tone: 'Product marketing',
+    usedGlossary: ['Mechanism Pro Jersey', 'Dark Olive'],
+    usedRules: ['Keep product names in English.', 'Keep colorway names unchanged.'],
+    updated: '4 min ago',
+  },
+  {
+    id: 'ft_002',
+    sourceLang: 'en',
+    targetLang: 'fr',
+    sourceText:
+      'Thanks for reaching out. Your order will leave our warehouse within 1 business day.',
+    outputText:
+      'Merci pour votre message. Votre commande quittera notre entrepot sous 1 jour ouvrable.',
+    tone: 'Customer support',
+    usedGlossary: [],
+    usedRules: ['Keep tone calm and helpful.'],
+    updated: '18 min ago',
+  },
+  {
+    id: 'ft_003',
+    sourceLang: 'en',
+    targetLang: 'it',
+    sourceText:
+      'Escapism blends everyday utility with a softer silhouette for long mixed-surface rides.',
+    outputText:
+      'Escapism unisce praticita quotidiana e una silhouette piu morbida per lunghe uscite su superfici miste.',
+    tone: 'Campaign',
+    usedGlossary: ['Escapism'],
+    usedRules: ['Keep collection names in English.'],
+    updated: 'yesterday',
+  },
+];
 
 export const TYPE_LABELS: Record<string, string> = {
   product: 'Product',

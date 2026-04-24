@@ -68,14 +68,11 @@ export const PromptsScreen = ({ docs }: Props) => {
 
   const onDiscard = () => setPrompt(saved);
 
-  const version = active === 'de' ? '12' : active === 'fr' ? '3' : '1';
-
   return (
     <div className="prompts-split">
       <aside className="prompts-list">
         <div className="hd">Languages</div>
         {LANGS.filter((l): l is (typeof LANGS)[number] & { code: TargetLang } => !l.source).map((l) => {
-          const v = l.code === 'de' ? '12' : l.code === 'fr' ? '3' : '1';
           return (
             <div
               key={l.code}
@@ -87,9 +84,6 @@ export const PromptsScreen = ({ docs }: Props) => {
                 <div className="nm">{l.label}</div>
                 <div className="sub">{l.region}</div>
               </div>
-              <span className="chip mono sq" style={{ fontSize: 10 }}>
-                v{v}
-              </span>
             </div>
           );
         })}
@@ -145,7 +139,7 @@ export const PromptsScreen = ({ docs }: Props) => {
                 ? saveError ?? 'Save failed'
                 : dirty
                 ? 'Unsaved changes'
-                : 'Last edited 3h ago · Ida W.'}
+                : 'Saved'}
             </span>
             <button className="btn">
               <IcHistory /> History
@@ -310,12 +304,6 @@ export const PromptsScreen = ({ docs }: Props) => {
                 — Model:{' '}
                 <span style={{ fontFamily: 'var(--mono)', color: 'var(--ink)' }}>
                   gpt-4.1-mini
-                </span>
-              </div>
-              <div>
-                — Version:{' '}
-                <span style={{ fontFamily: 'var(--mono)', color: 'var(--ink)' }}>
-                  v{version}
                 </span>
               </div>
             </div>

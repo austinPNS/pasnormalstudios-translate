@@ -129,18 +129,6 @@ export const SettingsScreen = () => {
               <Switch on={staleAlert} onChange={setStaleAlert} />
             </div>
           </div>
-          <div className="setting-row">
-            <div className="label">Default reviewer</div>
-            <div className="control">
-              <div className="field wide">
-                <select>
-                  <option>Ida Weibel</option>
-                  <option>Theo Brahms</option>
-                  <option>Mika Lindqvist</option>
-                </select>
-              </div>
-            </div>
-          </div>
         </div>
 
         <div className="setting-card">

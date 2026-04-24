@@ -66,6 +66,17 @@ export const IcPrompt = (p: P) => (
     <path d="M6 6.5h4M6 8.5h3" />
   </Ic>
 );
+export const IcTranslate = (p: P) => (
+  <Ic {...p}>
+    <path d="M3 4.5h7" />
+    <path d="M6.5 4.5c0 3-1.7 5.3-4 6.7" />
+    <path d="M4.5 8.5c.8.8 1.8 1.5 3 2" />
+    <path d="M10 6.5h3" />
+    <path d="M11.5 5v1.5" />
+    <path d="m9.5 12 2-5 2 5" />
+    <path d="M10.2 10.2h2.6" />
+  </Ic>
+);
 export const IcJobs = (p: P) => (
   <Ic {...p}>
     <circle cx="8" cy="8" r="5.5" />

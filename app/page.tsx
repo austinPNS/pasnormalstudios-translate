@@ -5,6 +5,7 @@ import { BulkModal } from '@/components/bulk-modal';
 import { IcSearch } from '@/components/icons';
 import { Kbd } from '@/components/primitives';
 import { DocumentsScreen } from '@/components/screens/documents';
+import { FreeTextScreen } from '@/components/screens/free-text';
 import { GlossaryScreen } from '@/components/screens/glossary';
 import { JobsScreen } from '@/components/screens/jobs';
 import { PromptsScreen } from '@/components/screens/prompts';
@@ -17,7 +18,7 @@ import { GLOSSARY, JOBS, SAMPLE_DOC, TWEAK_DEFAULTS } from '@/lib/data';
 import type { DocRecord, LangCode, Tweaks } from '@/lib/types';
 
 const isRoute = (v: string): v is Route =>
-  ['documents', 'viewer', 'prompts', 'jobs', 'glossary', 'settings'].includes(v);
+  ['documents', 'viewer', 'free-text', 'prompts', 'jobs', 'glossary', 'settings'].includes(v);
 
 export default function App() {
   const [route, setRoute] = useState<Route>('documents');
@@ -128,6 +129,7 @@ export default function App() {
           onBack={back}
         />
       );
+    if (route === 'free-text') return <FreeTextScreen />;
     if (route === 'prompts') return <PromptsScreen docs={docs} />;
     if (route === 'jobs') return <JobsScreen />;
     if (route === 'glossary') return <GlossaryScreen />;
@@ -138,6 +140,7 @@ export default function App() {
   const crumbs: Record<Route, { label: string }> = {
     documents: { label: 'Documents' },
     viewer: { label: 'Documents / ' + SAMPLE_DOC.title },
+    'free-text': { label: 'Free Text' },
     prompts: { label: 'Prompts' },
     jobs: { label: 'Jobs' },
     glossary: { label: 'Glossary' },

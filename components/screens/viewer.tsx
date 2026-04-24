@@ -48,8 +48,6 @@ export const ViewerScreen = ({ target, setTarget, diffMode, setDiffMode, onBack 
             <span className="doc-id">_id: {doc.id}</span>
             <span style={{ color: 'var(--ink-4)' }}>·</span>
             <span className="doc-id">_type: product</span>
-            <span style={{ color: 'var(--ink-4)' }}>·</span>
-            <span className="doc-id">rev: 4b2f91c</span>
           </div>
         </div>
         <div style={{ flex: 1 }} />
@@ -134,12 +132,12 @@ export const ViewerScreen = ({ target, setTarget, diffMode, setDiffMode, onBack 
 
       <div className={`viewer-panes ${diffMode === 'overlay' ? 'overlay' : ''}`}>
         <div className="pane">
-          <div className="pane-hd">
-            <LangChip code="en" source />
-            <span style={{ fontWeight: 500, color: 'var(--ink)' }}>English</span>
-            <span style={{ color: 'var(--ink-4)' }}>· source</span>
-            <span className="meta">revised 2d ago · Ida W.</span>
-          </div>
+            <div className="pane-hd">
+              <LangChip code="en" source />
+              <span style={{ fontWeight: 500, color: 'var(--ink)' }}>English</span>
+              <span style={{ color: 'var(--ink-4)' }}>· source</span>
+              <span className="meta">revised 2d ago</span>
+            </div>
           <div className="pane-body">
             <DocRenderer doc={doc} lang="en" diffMode={diffMode} other={target} />
           </div>

@@ -96,6 +96,28 @@ export interface GlossaryRow {
   notes?: string;
 }
 
+export interface FreeTextHistoryItem {
+  id: string;
+  sourceLang: LangCode;
+  targetLang: Exclude<LangCode, 'en'>;
+  sourceText: string;
+  outputText: string;
+  tone: string;
+  usedGlossary: string[];
+  usedRules: string[];
+  updated: string;
+}
+
+export interface FreeTextPreset {
+  id: string;
+  label: string;
+  sourceText: string;
+  outputs: Record<Exclude<LangCode, 'en'>, string>;
+  tone: string;
+  glossaryHits: string[];
+  rules: string[];
+}
+
 export type Tweaks = {
   layout: 'matrix' | 'list' | 'kanban';
   diffMode: 'side' | 'overlay' | 'diff';
