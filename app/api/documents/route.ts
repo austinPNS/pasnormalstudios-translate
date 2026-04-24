@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 import { sanityQuery, SanityConfigError, SanityQueryError } from '@/lib/sanity';
 import {
+  LANG_CODES,
   SANITY_TYPES,
   aliasFor,
+  buildListProjection,
   type SanityTypeConfig,
   type TranslatableField,
 } from '@/lib/translatable-fields';
@@ -11,20 +13,6 @@ import type { DocLangState, DocRecord, LangCode, Status } from '@/lib/types';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-const LANG_CODES: LangCode[] = ['en', 'de', 'fr', 'it'];
-
-const buildProjection = (fields: TranslatableField[]): string => {
-  const lines: string[] = ['_id', '_updatedAt'];
-  for (const f of fields) {
-    for (const lang of LANG_CODES) {
-      const alias = aliasFor(f.path, lang);
-      const src = `${f.path}.${lang}`;
-      lines.push(f.kind === 'portableText' ? `"${alias}": count(${src})` : `"${alias}": ${src}`);
-    }
-  }
-  return `{ ${lines.join(', ')} }`;
-};
 
 const hasContent = (value: unknown, kind: TranslatableField['kind']): boolean => {
   if (kind === 'portableText') return typeof value === 'number' && value > 0;
@@ -125,7 +113,7 @@ const buildQuery = (sanityType: string, config: SanityTypeConfig): string => {
     '!(_id in path("drafts.**"))',
     config.filter,
   ].filter((s) => s.length > 0);
-  const projection = buildProjection(config.fields);
+  const projection = buildListProjection(config.fields);
   return `*[${filters.join(' && ')}] | order(_updatedAt desc) ${projection}`;
 };
 

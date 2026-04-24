@@ -6,7 +6,6 @@ import type {
   JobRecord,
   Lang,
   PromptsMap,
-  SampleDoc,
 } from './types';
 
 export const LANGS: Lang[] = [
@@ -15,130 +14,6 @@ export const LANGS: Lang[] = [
   { code: 'fr', label: 'French', region: 'FR-FR' },
   { code: 'it', label: 'Italian', region: 'IT-IT' },
 ];
-
-export const SAMPLE_DOC: SampleDoc = {
-  id: 'prod-mechanism-pro-jersey',
-  title: 'Mechanism Pro Jersey — Men',
-  type: 'product',
-  blocks: [
-    {
-      kind: 'fields',
-      label: 'Core',
-      fields: [
-        {
-          name: 'title',
-          type: 'string',
-          en: 'Mechanism Pro Jersey — Men',
-          de: 'Mechanism Pro Trikot — Herren',
-          fr: 'Maillot Mechanism Pro — Homme',
-          it: 'Maglia Mechanism Pro — Uomo',
-        },
-        {
-          name: 'slug',
-          type: 'slug',
-          en: 'mechanism-pro-jersey-men',
-          de: 'mechanism-pro-jersey-men',
-          fr: 'mechanism-pro-jersey-men',
-          it: 'mechanism-pro-jersey-men',
-        },
-        {
-          name: 'subtitle',
-          type: 'string',
-          en: 'Race-cut jersey engineered for long days in the saddle.',
-          de: 'Race-Cut Trikot für lange Tage im Sattel.',
-          fr: 'Maillot coupe course, conçu pour les longues journées en selle.',
-          it: null,
-        },
-      ],
-    },
-    {
-      kind: 'fields',
-      label: 'Marketing copy',
-      fields: [
-        {
-          name: 'shortDescription',
-          type: 'text',
-          en: 'A stripped-back, race-oriented jersey built around a single idea: get out of the way. Lightweight, breathable and fast.',
-          de: 'Ein reduziertes, rennorientiertes Trikot, gebaut um eine einzige Idee: aus dem Weg gehen. Leicht, atmungsaktiv und schnell.',
-          fr: "Un maillot dépouillé et orienté course, construit autour d'une idée : disparaître. Léger, respirant et rapide.",
-          it: null,
-        },
-        {
-          name: 'longDescription',
-          type: 'portableText',
-          en: 'The Mechanism Pro Jersey is cut closer to the body, uses a featherweight mesh panel across the back, and features three rear pockets plus a zipped valuables pocket. Seams are flatlocked. The zip is a YKK camlock. It is intended to be raced, but it will reward any rider who likes their jerseys to disappear on the bike.',
-          de: 'Das Mechanism Pro Trikot ist körpernah geschnitten, verwendet ein federleichtes Mesh-Panel am Rücken und verfügt über drei hintere Taschen plus eine Wertsachentasche mit Reißverschluss. Die Nähte sind flach vernäht. Der Zipper ist ein YKK Camlock. Es ist für das Rennen gemacht, aber es wird jeden Fahrer belohnen, der möchte, dass sein Trikot auf dem Rad verschwindet.',
-          fr: 'Le maillot Mechanism Pro est coupé plus près du corps, utilise un panneau en mesh ultra-léger dans le dos, et comporte trois poches arrière plus une poche zippée pour les objets de valeur. Les coutures sont plates. Le zip est un YKK camlock. Il est pensé pour la course, mais récompensera tout cycliste qui préfère que son maillot disparaisse sur le vélo.',
-          it: 'La maglia Mechanism Pro ha un taglio più aderente al corpo, utilizza un pannello in mesh ultraleggero sulla schiena, e presenta tre tasche posteriori più un taschino con zip per oggetti di valore.',
-        },
-      ],
-    },
-    {
-      kind: 'image',
-      label: 'Hero imagery',
-      items: [
-        {
-          alt: {
-            en: 'Rider in Mechanism Pro Jersey cresting a col at sunrise.',
-            de: 'Fahrer im Mechanism Pro Trikot erklimmt einen Pass bei Sonnenaufgang.',
-            fr: 'Un coureur en maillot Mechanism Pro franchit un col au lever du soleil.',
-            it: null,
-          },
-          caption: {
-            en: 'Col du Galibier, April 2026.',
-            de: 'Col du Galibier, April 2026.',
-            fr: 'Col du Galibier, avril 2026.',
-            it: 'Col du Galibier, aprile 2026.',
-          },
-        },
-      ],
-    },
-    {
-      kind: 'fields',
-      label: 'Materials & fit',
-      fields: [
-        {
-          name: 'materials',
-          type: 'text',
-          en: 'Main body: 82% recycled polyester, 18% elastane. Back panel: 100% recycled polyester mesh. Made in Italy.',
-          de: 'Hauptteil: 82% recyceltes Polyester, 18% Elasthan. Rückenteil: 100% recyceltes Polyester-Mesh. Hergestellt in Italien.',
-          fr: 'Corps : 82% polyester recyclé, 18% élasthanne. Panneau dos : 100% mesh polyester recyclé. Fabriqué en Italie.',
-          it: null,
-        },
-        {
-          name: 'fitNotes',
-          type: 'text',
-          en: 'Race fit. For a relaxed fit, size up. Model is 182cm, wearing Medium.',
-          de: 'Race-Passform. Für einen entspannteren Sitz eine Größe größer wählen. Das Modell ist 182 cm groß und trägt Größe M.',
-          fr: 'Coupe course. Pour une coupe plus ample, prendre une taille au-dessus. Le mannequin mesure 182 cm et porte une taille M.',
-          it: null,
-        },
-      ],
-    },
-    {
-      kind: 'fields',
-      label: 'SEO',
-      fields: [
-        {
-          name: 'metaTitle',
-          type: 'string',
-          en: 'Mechanism Pro Jersey — Men | Pas Normal Studios',
-          de: 'Mechanism Pro Trikot — Herren | Pas Normal Studios',
-          fr: 'Maillot Mechanism Pro — Homme | Pas Normal Studios',
-          it: null,
-        },
-        {
-          name: 'metaDescription',
-          type: 'text',
-          en: 'A race-cut, long-day jersey. Lightweight, breathable, made in Italy.',
-          de: 'Ein Race-Cut Trikot für lange Tage. Leicht, atmungsaktiv, in Italien hergestellt.',
-          fr: 'Un maillot coupe course pour longues journées. Léger, respirant, fabriqué en Italie.',
-          it: null,
-        },
-      ],
-    },
-  ],
-};
 
 // SSR fallback. Real content lives in data/prompts.json and is fetched on mount.
 export const PROMPTS: PromptsMap = {

@@ -6,7 +6,7 @@ type: project
 
 # Sanity Integration Plan
 
-**Status:** Not started (2026-04-22). Currently the app uses mock `DOCS` in `lib/data.ts` and static `SAMPLE_DOC` in the viewer. Goal: connect to `k15yl91v/production` and drive the UI from real content.
+**Status:** Phase 1 + Phase 2 + Phase 3A complete (2026-04-24). Documents screen and viewer both driven by real Sanity content. `SAMPLE_DOC` deleted. Next: Phase 3B (uberProduct nested arrays: `specifications[]`, `features[]`, `impactFeatures[]`, `testimonials[]`; pnsCollection nested `collectionFeatures*.features[]`, gallery, CTAs).
 
 **Why:** The UI is finished but has zero connection to real content. Sanity reads first gives the highest-value signal and validates the HTTP flow + `perspective=previewDrafts` before layering in the translation engine and writes.
 
@@ -14,17 +14,12 @@ type: project
 
 ---
 
-## Phase 1: Foundation (lib + env)
+## Phase 1: Foundation (lib + env) — DONE
 
-**Create:**
-- `lib/sanity.ts` — HTTP client helper: `sanityQuery<T>(groq, params?)` using `SANITY_VIEW_TOKEN` + `perspective=previewDrafts`. Use `fetch` directly, no `@sanity/client` dep (matches main project's HTTP-only approach).
-- `.env.example` — document `SANITY_PROJECT_ID`, `SANITY_DATASET`, `SANITY_API_VERSION`, `SANITY_VIEW_TOKEN` (no token committed)
+- `lib/sanity.ts` ships a `sanityQuery<T>()` helper using `perspective=previewDrafts` and `SECRET_SANITY_VIEW_TOKEN`. No `@sanity/client` dep.
+- Env reads use `NEXT_PUBLIC_SANITY_PROJECT_ID`, `NEXT_PUBLIC_SANITY_DATASET`, `NEXT_PUBLIC_SANITY_API_VERSION`, plus the server-only `SECRET_SANITY_VIEW_TOKEN`.
 
-**Decisions:**
-- Server-side only — route handlers call Sanity; client never gets the token
-- API version `2025-02-19`, project `k15yl91v`, dataset `production`
-
-## Phase 2: Documents audit API + read path
+## Phase 2: Documents audit API + read path — DONE
 
 **Create:**
 - `app/api/documents/route.ts` — GET endpoint that runs the 5 audit queries (product, uberProduct, feature.product, pnsCategory, pnsCollection) and returns a unified `DocRecord[]`
@@ -51,18 +46,16 @@ type: project
 - `lib/data.ts` — **remove** `DOCS` export. Keep `LANGS`, `TYPE_LABELS`, `STATUS_LABELS`, `TWEAK_DEFAULTS`, `SAMPLE_DOC` (still mock).
 - `components/screens/documents.tsx` — fetch from `/api/documents` on mount, add `useState`/`useEffect`, loading state. No shape change.
 
-**Recommended start:** ship Phase 1 + scoped Phase 2 (just `product` type) first to validate HTTP flow, `previewDrafts`, and status mapping end-to-end. Then extend to other 4 types.
+**Shipped coverage:** `product`, `uberProduct` (incl. `sharedProductIntendedUse->title/description` ref), `feature.product`, `pnsCategory`, `pnsCollection`, `frontPage` stub. `aliasFor()` handles both `.` and `->` in paths. Matching filter tabs exist in [documents.tsx](components/screens/documents.tsx). Nested-array fields (`specifications[]`, `features[]`, `impactFeatures[]`, `testimonials[]`, collection features/gallery) are deferred — they need richer projection and a different status-count model.
 
-## Phase 3: Single-document viewer
+## Phase 3A: Single-document viewer — DONE
 
-**Create:**
-- `app/api/documents/[id]/route.ts` — GET one doc with all translatable fields projected (portable text, i18n.string, i18n.text, nested arrays) → returns `SampleDoc` shape
+- `app/api/documents/[id]/route.ts` resolves `_type` via draft-aware lookup (`_id == $id || _id == "drafts." + $id`), then projects translatable fields per-type via shared `buildDetailProjection`.
+- `lib/document-mapper.ts` groups fields into semantic blocks (Core / Content / Model Info / SEO / Intended Use) using the new `group` field on `TranslatableField`. Flattens portable text to plain strings joined with `\n\n`.
+- `SampleDoc.sanityType: string` added so the viewer header displays the real Sanity `_type`.
+- Viewer has loading / error / empty states and fetches on `docId` change.
 
-**Change:**
-- `components/screens/viewer.tsx` — fetch from `/api/documents/[id]` instead of using static `SAMPLE_DOC`
-- `lib/data.ts` — drop `SAMPLE_DOC` export
-
-**Open decision:** the existing `SampleDoc.blocks` uses `FieldBlock` / `ImageBlock`. Sanity schemas have `specifications`, `features`, `impactFeatures`, `testimonials` — decide whether to use one block per Sanity field group, or flatten everything.
+**Nested arrays and repeating groups (`specifications[]`, `features[]`, `impactFeatures[]`, `testimonials[]`, collection features/gallery/CTAs) are deferred to Phase 3B.** The current mapper only handles flat i18n.string / i18n.text / portable text.
 
 ## Phase 4 (deferred): Stale detection, jobs, writes
 

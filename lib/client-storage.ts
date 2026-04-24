@@ -1,4 +1,4 @@
-import type { DocRecord, GlossaryRow, PromptsMap } from './types';
+import type { DocRecord, GlossaryRow, PromptsMap, SampleDoc } from './types';
 
 export const fetchDocuments = async (): Promise<DocRecord[]> => {
   const res = await fetch('/api/documents', { cache: 'no-store' });
@@ -8,6 +8,16 @@ export const fetchDocuments = async (): Promise<DocRecord[]> => {
   }
   const data = (await res.json()) as { docs: DocRecord[] };
   return data.docs;
+};
+
+export const fetchDocument = async (id: string): Promise<SampleDoc> => {
+  const res = await fetch(`/api/documents/${encodeURIComponent(id)}`, { cache: 'no-store' });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`GET /api/documents/${id} failed: ${res.status} ${err}`);
+  }
+  const data = (await res.json()) as { doc: SampleDoc };
+  return data.doc;
 };
 
 export const fetchGlossaryEntries = async (): Promise<GlossaryRow[]> => {

@@ -31,7 +31,7 @@ interface Props {
   onBulk: (ids: string[]) => void;
 }
 
-type Filter = 'product' | 'uberProduct' | 'feature' | 'frontpage';
+type Filter = 'product' | 'uberProduct' | 'category' | 'collection' | 'feature' | 'frontpage';
 
 export const DocumentsScreen = ({ layout, docs, loading, error, onOpenDoc, onBulk }: Props) => {
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -93,6 +93,8 @@ export const DocumentsScreen = ({ layout, docs, loading, error, onOpenDoc, onBul
             options={[
               { v: 'product', label: 'Product' },
               { v: 'uberProduct', label: 'Uber Product' },
+              { v: 'category', label: 'Category' },
+              { v: 'collection', label: 'Collection' },
               { v: 'feature', label: 'Product Feature' },
               { v: 'frontpage', label: 'Front page' },
             ]}

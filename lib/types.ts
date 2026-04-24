@@ -62,6 +62,7 @@ export type Block = FieldBlock | ImageBlock;
 
 export interface SampleDoc {
   id: string;
+  sanityType: string;
   title: string;
   type: DocType;
   blocks: Block[];

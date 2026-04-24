@@ -1,6 +1,8 @@
 'use client';
 
-import { LANGS, SAMPLE_DOC } from '@/lib/data';
+import { useEffect, useState } from 'react';
+import { LANGS } from '@/lib/data';
+import { fetchDocument } from '@/lib/client-storage';
 import type { Block, LangCode, SampleDoc, Tweaks } from '@/lib/types';
 import {
   IcArrow,
@@ -22,15 +24,58 @@ interface Props {
   onBack: () => void;
 }
 
-export const ViewerScreen = ({ target, setTarget, diffMode, setDiffMode, onBack }: Props) => {
-  const doc = SAMPLE_DOC;
+export const ViewerScreen = ({ docId, target, setTarget, diffMode, setDiffMode, onBack }: Props) => {
+  const [doc, setDoc] = useState<SampleDoc | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!docId) {
+      setDoc(null);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    fetchDocument(docId)
+      .then((d) => {
+        if (!cancelled) setDoc(d);
+      })
+      .catch((e: unknown) => {
+        if (!cancelled) {
+          setError(e instanceof Error ? e.message : 'Unknown error');
+          setDoc(null);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [docId]);
+
+  if (loading) {
+    return <ViewerStatus onBack={onBack} message="Loading document…" />;
+  }
+  if (error) {
+    return <ViewerStatus onBack={onBack} message={`Failed to load document: ${error}`} />;
+  }
+  if (!doc) {
+    return <ViewerStatus onBack={onBack} message="No document selected." />;
+  }
+
   const targetLang = LANGS.find((l) => l.code === target)!;
 
   const allFields = doc.blocks
     .filter((b): b is Extract<Block, { kind: 'fields' }> => b.kind === 'fields')
     .flatMap((b) => b.fields);
-  const translated = allFields.filter((f) => f[target] != null).length;
-  const missing = allFields.length - translated;
+  // Only fields that have EN content count toward translation progress.
+  const withEn = allFields.filter((f) => f.en != null);
+  const translated = withEn.filter((f) => f[target] != null).length;
+  const missing = withEn.length - translated;
 
   return (
     <>
@@ -47,7 +92,7 @@ export const ViewerScreen = ({ target, setTarget, diffMode, setDiffMode, onBack 
           <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
             <span className="doc-id">_id: {doc.id}</span>
             <span style={{ color: 'var(--ink-4)' }}>·</span>
-            <span className="doc-id">_type: product</span>
+            <span className="doc-id">_type: {doc.sanityType}</span>
           </div>
         </div>
         <div style={{ flex: 1 }} />
@@ -246,6 +291,24 @@ const DocRenderer = ({
     </>
   );
 };
+
+const ViewerStatus = ({ onBack, message }: { onBack: () => void; message: string }) => (
+  <div style={{ padding: 40 }}>
+    <button onClick={onBack} style={{ color: 'var(--ink-3)', fontSize: 12 }}>
+      ← Documents
+    </button>
+    <div
+      style={{
+        marginTop: 16,
+        color: 'var(--ink-3)',
+        fontFamily: 'var(--mono)',
+        fontSize: 12.5,
+      }}
+    >
+      {message}
+    </div>
+  </div>
+);
 
 const RenderDiff = ({ src, target }: { src: string; target: string }) => {
   const srcWords = new Set(src.toLowerCase().split(/\s+/));

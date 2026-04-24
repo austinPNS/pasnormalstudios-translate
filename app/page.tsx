@@ -14,7 +14,7 @@ import { ViewerScreen } from '@/components/screens/viewer';
 import { Sidebar, TopNav, type Route } from '@/components/sidebar';
 import { TweaksPanel } from '@/components/tweaks-panel';
 import { fetchDocuments } from '@/lib/client-storage';
-import { GLOSSARY, JOBS, SAMPLE_DOC, TWEAK_DEFAULTS } from '@/lib/data';
+import { GLOSSARY, JOBS, TWEAK_DEFAULTS } from '@/lib/data';
 import type { DocRecord, LangCode, Tweaks } from '@/lib/types';
 
 const isRoute = (v: string): v is Route =>
@@ -139,7 +139,7 @@ export default function App() {
 
   const crumbs: Record<Route, { label: string }> = {
     documents: { label: 'Documents' },
-    viewer: { label: 'Documents / ' + SAMPLE_DOC.title },
+    viewer: { label: docId ? `Documents / ${docId}` : 'Documents' },
     'free-text': { label: 'Free Text' },
     prompts: { label: 'Prompts' },
     jobs: { label: 'Jobs' },

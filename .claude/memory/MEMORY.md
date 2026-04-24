@@ -3,7 +3,8 @@
 Project-specific knowledge for the `pns-translate` translation management UI. Translation rules originate from the main `pas-normal-studios-web` project and are mirrored here so this tool produces consistent output.
 
 ## Pending Tasks
-- [Sanity integration plan](sanity-integration-plan.md) — 4-phase plan (foundation → documents read → viewer → writes). Replace mock data with real Sanity. Not started.
+- [TODO — outstanding Sanity work](todo.md) — Phase 3B (nested arrays on uberProduct + pnsCollection), Phase 4 (writes, stale detection, jobs, portable text editing)
+- [Sanity integration plan](sanity-integration-plan.md) — reference plan. Phases 1, 2, 3A shipped
 
 ## Shortcuts
 - **"translate"** → [Translation process](translation-process.md): audit → confirm scope → translate → batch patch → review → publish
