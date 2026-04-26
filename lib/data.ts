@@ -217,6 +217,7 @@ export const TYPE_LABELS: Record<string, string> = {
   category: 'Category',
   feature: 'Product Feature',
   frontpage: 'Front page',
+  hero: 'Hero',
   block: 'Block',
 };
 

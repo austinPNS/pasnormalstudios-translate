@@ -51,7 +51,6 @@ export const TweaksPanel = ({ tweaks, setTweaks, active }: Props) => {
           <div className="seg">
             {([
               ['side', 'Side'],
-              ['overlay', 'Overlay'],
               ['diff', 'Diff'],
             ] as const).map(([v, l]) => (
               <button

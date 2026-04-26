@@ -18,7 +18,6 @@ export const BulkModal = ({ initialSel, docs, onClose, onSubmit }: Props) => {
   const [sel, setSel] = useState<Set<string>>(new Set(initialSel));
   const [targets, setTargets] = useState<Set<LangCode>>(new Set<LangCode>(['fr', 'it']));
   const [skipExisting, setSkipExisting] = useState(true);
-  const [model, setModel] = useState('gpt-4.1-mini');
 
   const toggleDoc = (id: string) => {
     const n = new Set(sel);
@@ -147,23 +146,6 @@ export const BulkModal = ({ initialSel, docs, onClose, onSubmit }: Props) => {
                   </div>
                 </div>
               </div>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  padding: '6px 0 10px',
-                }}
-              >
-                <div style={{ fontSize: 13, fontWeight: 500, flex: 1 }}>Model override</div>
-                <div className="field" style={{ minWidth: 180 }}>
-                  <select value={model} onChange={(e) => setModel(e.target.value)}>
-                    <option>gpt-4.1-mini</option>
-                    <option>gpt-4.1</option>
-                    <option>claude-sonnet-4-5</option>
-                  </select>
-                </div>
-              </div>
             </>
           )}
 
@@ -212,12 +194,6 @@ export const BulkModal = ({ initialSel, docs, onClose, onSubmit }: Props) => {
                   <span style={{ fontFamily: 'var(--mono)' }}>
                     ~{Math.floor(timeEst / 60)}m {timeEst % 60}s
                   </span>
-                </div>
-                <div>
-                  <span style={{ color: 'var(--ink-3)', width: 120, display: 'inline-block' }}>
-                    Model
-                  </span>
-                  <span style={{ fontFamily: 'var(--mono)' }}>{model}</span>
                 </div>
                 <div>
                   <span style={{ color: 'var(--ink-3)', width: 120, display: 'inline-block' }}>

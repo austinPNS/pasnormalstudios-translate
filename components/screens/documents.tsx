@@ -22,6 +22,8 @@ import {
   StatusDot,
 } from '../primitives';
 
+export type DocsFilter = 'product' | 'uberProduct' | 'category' | 'collection' | 'feature' | 'frontpage' | 'hero';
+
 interface Props {
   layout: Tweaks['layout'];
   docs: DocRecord[];
@@ -29,14 +31,14 @@ interface Props {
   error: string | null;
   onOpenDoc: (id: string) => void;
   onBulk: (ids: string[]) => void;
+  filter: DocsFilter;
+  setFilter: (f: DocsFilter) => void;
+  search: string;
+  setSearch: (s: string) => void;
 }
 
-type Filter = 'product' | 'uberProduct' | 'category' | 'collection' | 'feature' | 'frontpage';
-
-export const DocumentsScreen = ({ layout, docs, loading, error, onOpenDoc, onBulk }: Props) => {
+export const DocumentsScreen = ({ layout, docs, loading, error, onOpenDoc, onBulk, filter, setFilter, search, setSearch }: Props) => {
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [filter, setFilter] = useState<Filter>('product');
-  const [search, setSearch] = useState('');
 
   const toggle = (id: string) => {
     const n = new Set(selected);
@@ -87,7 +89,7 @@ export const DocumentsScreen = ({ layout, docs, loading, error, onOpenDoc, onBul
           />
         </div>
         <div className="filters">
-          <Seg<Filter>
+          <Seg<DocsFilter>
             value={filter}
             onChange={setFilter}
             options={[
@@ -97,6 +99,7 @@ export const DocumentsScreen = ({ layout, docs, loading, error, onOpenDoc, onBul
               { v: 'collection', label: 'Collection' },
               { v: 'feature', label: 'Product Feature' },
               { v: 'frontpage', label: 'Front page' },
+              { v: 'hero', label: 'Hero' },
             ]}
           />
         </div>

@@ -86,9 +86,9 @@ const toDocRecord = (
     };
   }
 
+  const titleAlias = aliasFor(config.titleField ?? 'title', 'en');
   const title =
-    (typeof row[aliasFor('title', 'en')] === 'string' && (row[aliasFor('title', 'en')] as string)) ||
-    id;
+    (typeof row[titleAlias] === 'string' && (row[titleAlias] as string)) || id;
 
   const langs = {} as Record<LangCode, DocLangState>;
   for (const lang of LANG_CODES) {
@@ -108,10 +108,11 @@ const toDocRecord = (
 };
 
 const buildQuery = (sanityType: string, config: SanityTypeConfig): string => {
+  const extra = typeof config.filter === 'function' ? config.filter() : config.filter;
   const filters = [
     `_type == "${sanityType}"`,
     '!(_id in path("drafts.**"))',
-    config.filter,
+    extra,
   ].filter((s) => s.length > 0);
   const projection = buildListProjection(config.fields);
   return `*[${filters.join(' && ')}] | order(_updatedAt desc) ${projection}`;

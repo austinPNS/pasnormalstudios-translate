@@ -1,18 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { LANGS } from '@/lib/data';
 import { fetchDocument } from '@/lib/client-storage';
-import type { Block, LangCode, SampleDoc, Tweaks } from '@/lib/types';
-import {
-  IcArrow,
-  IcBlock,
-  IcCheck,
-  IcHistory,
-  IcOpen,
-  IcPlay,
-  IcSync,
-} from '../icons';
+import type { ImageItem, LangCode, SampleDoc, Tweaks } from '@/lib/types';
+import { IcArrow, IcBlock, IcOpen, IcPlay, IcSync } from '../icons';
 import { FieldType, LangChip } from '../primitives';
 
 interface Props {
@@ -28,18 +20,14 @@ export const ViewerScreen = ({ docId, target, setTarget, diffMode, setDiffMode, 
   const [doc, setDoc] = useState<SampleDoc | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [running, setRunning] = useState(false);
+  const [runMsg, setRunMsg] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!docId) {
-      setDoc(null);
-      setLoading(false);
-      setError(null);
-      return;
-    }
+  const reload = (id: string) => {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    fetchDocument(docId)
+    fetchDocument(id)
       .then((d) => {
         if (!cancelled) setDoc(d);
       })
@@ -55,7 +43,39 @@ export const ViewerScreen = ({ docId, target, setTarget, diffMode, setDiffMode, 
     return () => {
       cancelled = true;
     };
+  };
+
+  useEffect(() => {
+    if (!docId) {
+      setDoc(null);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+    return reload(docId);
   }, [docId]);
+
+  const onRun = async () => {
+    if (!docId || running) return;
+    setRunning(true);
+    setRunMsg(null);
+    try {
+      const res = await fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ docId, target }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+      const n = json.translated ?? 0;
+      setRunMsg(n === 0 ? 'Nothing to translate.' : `Translated ${n} field${n === 1 ? '' : 's'}.`);
+      if (n > 0) reload(docId);
+    } catch (e: unknown) {
+      setRunMsg(`Error: ${e instanceof Error ? e.message : 'Unknown error'}`);
+    } finally {
+      setRunning(false);
+    }
+  };
 
   if (loading) {
     return <ViewerStatus onBack={onBack} message="Loading document…" />;
@@ -68,14 +88,11 @@ export const ViewerScreen = ({ docId, target, setTarget, diffMode, setDiffMode, 
   }
 
   const targetLang = LANGS.find((l) => l.code === target)!;
+  const isDiff = diffMode === 'diff';
 
-  const allFields = doc.blocks
-    .filter((b): b is Extract<Block, { kind: 'fields' }> => b.kind === 'fields')
-    .flatMap((b) => b.fields);
-  // Only fields that have EN content count toward translation progress.
+  const allFields = doc.blocks.flatMap((b) => (b.kind === 'fields' ? b.fields : []));
   const withEn = allFields.filter((f) => f.en != null);
   const translated = withEn.filter((f) => f[target] != null).length;
-  const missing = withEn.length - translated;
 
   return (
     <>
@@ -97,9 +114,6 @@ export const ViewerScreen = ({ docId, target, setTarget, diffMode, setDiffMode, 
         </div>
         <div style={{ flex: 1 }} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button className="btn">
-            <IcHistory /> History
-          </button>
           <button className="btn">
             <IcOpen /> Open in Sanity
           </button>
@@ -140,7 +154,7 @@ export const ViewerScreen = ({ docId, target, setTarget, diffMode, setDiffMode, 
             borderRadius: 6,
           }}
         >
-          {(['side', 'overlay', 'diff'] as const).map((m) => (
+          {(['side', 'diff'] as const).map((m) => (
             <button
               key={m}
               onClick={() => setDiffMode(m)}
@@ -164,133 +178,146 @@ export const ViewerScreen = ({ docId, target, setTarget, diffMode, setDiffMode, 
           <span>
             <span className="n">{translated}</span>/{allFields.length} fields
           </span>
-          <span className="mod">{doc.blocks.length} blocks</span>
-          <span className="rm">{missing} missing</span>
         </div>
-        <button className="btn sm">
-          <IcPlay /> Re-run
-        </button>
-        <button className="btn primary sm">
-          <IcCheck /> Approve
-        </button>
-      </div>
-
-      <div className={`viewer-panes ${diffMode === 'overlay' ? 'overlay' : ''}`}>
-        <div className="pane">
-            <div className="pane-hd">
-              <LangChip code="en" source />
-              <span style={{ fontWeight: 500, color: 'var(--ink)' }}>English</span>
-              <span style={{ color: 'var(--ink-4)' }}>· source</span>
-              <span className="meta">revised 2d ago</span>
-            </div>
-          <div className="pane-body">
-            <DocRenderer doc={doc} lang="en" diffMode={diffMode} other={target} />
-          </div>
-        </div>
-        {diffMode !== 'overlay' && (
-          <div className="pane">
-            <div className="pane-hd">
-              <LangChip code={target} />
-              <span style={{ fontWeight: 500, color: 'var(--ink)' }}>{targetLang.label}</span>
-              <span style={{ color: 'var(--ink-4)' }}>· target</span>
-              <span className="meta">14:02 · gpt-4.1-mini</span>
-            </div>
-            <div className="pane-body">
-              <DocRenderer doc={doc} lang={target} diffMode={diffMode} other="en" />
-            </div>
-          </div>
+        {runMsg && (
+          <span
+            style={{
+              fontSize: 12,
+              color: runMsg.startsWith('Error') ? 'var(--err)' : 'var(--ink-3)',
+              fontFamily: 'var(--mono)',
+            }}
+          >
+            {runMsg}
+          </span>
         )}
+        <button
+          className="btn primary sm"
+          onClick={onRun}
+          disabled={running || !docId}
+          style={running ? { opacity: 0.6, cursor: 'wait' } : undefined}
+        >
+          <IcPlay /> {running ? 'Running…' : 'Run'}
+        </button>
+      </div>
+
+      <div className="viewer-panes">
+        <div className="pane-hd-row">
+          <div className="pane-hd">
+            <LangChip code="en" source />
+            <span style={{ fontWeight: 500, color: 'var(--ink)' }}>English</span>
+            <span style={{ color: 'var(--ink-4)' }}>· source</span>
+            <span className="meta">revised 2d ago</span>
+          </div>
+          <div className="pane-hd">
+            <LangChip code={target} />
+            <span style={{ fontWeight: 500, color: 'var(--ink)' }}>{targetLang.label}</span>
+            <span style={{ color: 'var(--ink-4)' }}>· target</span>
+            <span className="meta">claude-opus-4-7</span>
+          </div>
+        </div>
+
+        <div className="viewer-rows">
+          {doc.blocks.map((b, bi) => {
+            if (b.kind === 'fields') {
+              return (
+                <Fragment key={bi}>
+                  <div className="block-hd-row">
+                    <IcBlock /> <span>{b.label}</span>
+                  </div>
+                  {b.fields.map((f, fi) => {
+                    const en = f.en;
+                    const tg = f[target];
+                    const changed = isDiff && en != null && tg != null && en !== tg;
+                    return (
+                      <div key={fi} className="row">
+                        <div className="row-label">
+                          <span>{f.name}</span>
+                          <FieldType t={f.type} />
+                        </div>
+                        <div className="row-cells">
+                          <TextCell value={en} />
+                          <TextCell
+                            value={tg}
+                            diff={isDiff && en != null ? en : null}
+                            changed={changed}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </Fragment>
+              );
+            }
+            if (b.kind === 'image') {
+              return (
+                <Fragment key={bi}>
+                  <div className="block-hd-row">
+                    <IcBlock /> <span>{b.label}</span>
+                  </div>
+                  {b.items.map((it, ii) => (
+                    <div key={ii} className="row">
+                      <div className="row-label">
+                        <span>image[{ii}]</span>
+                        <FieldType t="image + alt" />
+                      </div>
+                      <div className="row-cells">
+                        <ImageCell item={it} lang="en" />
+                        <ImageCell item={it} lang={target} />
+                      </div>
+                    </div>
+                  ))}
+                </Fragment>
+              );
+            }
+            return null;
+          })}
+        </div>
       </div>
     </>
   );
 };
 
-const DocRenderer = ({
-  doc,
-  lang,
-  diffMode,
-  other,
+const TextCell = ({
+  value,
+  diff,
+  changed,
 }: {
-  doc: SampleDoc;
-  lang: LangCode;
-  diffMode: Tweaks['diffMode'];
-  other: LangCode;
+  value: string | null;
+  diff?: string | null;
+  changed?: boolean;
 }) => {
-  return (
-    <>
-      {doc.blocks.map((b, bi) => {
-        if (b.kind === 'fields') {
-          return (
-            <div key={bi}>
-              <div className="block-hd">
-                <IcBlock /> <span>{b.label}</span>
-              </div>
-              {b.fields.map((f, fi) => {
-                const v = f[lang];
-                const ov = f[other];
-                const changed = diffMode === 'diff' && v !== ov && !!v && !!ov;
-                return (
-                  <div key={fi} className="field-row">
-                    <div className="field-label">
-                      <span>{f.name}</span>
-                      <FieldType t={f.type} />
-                    </div>
-                    {v == null ? (
-                      <div className="field-value empty">— not translated —</div>
-                    ) : diffMode === 'diff' && lang !== 'en' && other === 'en' && ov ? (
-                      <div className={`field-value ${changed ? 'changed' : ''}`}>
-                        <RenderDiff src={ov} target={v} />
-                      </div>
-                    ) : (
-                      <div className="field-value" style={{ whiteSpace: 'pre-wrap' }}>
-                        {v}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          );
-        }
-        if (b.kind === 'image') {
-          return (
-            <div key={bi}>
-              <div className="block-hd">
-                <IcBlock /> <span>{b.label}</span>
-              </div>
-              {b.items.map((it, ii) => (
-                <div key={ii} className="field-row">
-                  <div className="field-label">
-                    <span>image[{ii}]</span>
-                    <FieldType t="image + alt" />
-                  </div>
-                  <div className="block-image">
-                    <div className="ph">{'PRODUCT\nSHOT'}</div>
-                    <div className="txt">
-                      <div className="alt">alt</div>
-                      <div>
-                        {it.alt[lang] || (
-                          <span style={{ color: 'var(--ink-4)', fontStyle: 'italic' }}>
-                            — not translated —
-                          </span>
-                        )}
-                      </div>
-                      <div className="alt" style={{ marginTop: 8 }}>
-                        caption
-                      </div>
-                      <div>{it.caption[lang]}</div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          );
-        }
-        return null;
-      })}
-    </>
-  );
+  if (value == null) return <div className="cell empty">— not translated —</div>;
+  if (diff) {
+    return (
+      <div className={`cell ${changed ? 'changed' : ''}`}>
+        <RenderDiff src={diff} target={value} />
+      </div>
+    );
+  }
+  return <div className="cell">{value}</div>;
 };
+
+const ImageCell = ({ item, lang }: { item: ImageItem; lang: LangCode }) => (
+  <div className="cell">
+    <div className="block-image">
+      <div className="ph">{'PRODUCT\nSHOT'}</div>
+      <div className="txt">
+        <div className="alt">alt</div>
+        <div>
+          {item.alt[lang] || (
+            <span style={{ color: 'var(--ink-4)', fontStyle: 'italic' }}>
+              — not translated —
+            </span>
+          )}
+        </div>
+        <div className="alt" style={{ marginTop: 8 }}>
+          caption
+        </div>
+        <div>{item.caption[lang]}</div>
+      </div>
+    </div>
+  </div>
+);
 
 const ViewerStatus = ({ onBack, message }: { onBack: () => void; message: string }) => (
   <div style={{ padding: 40 }}>

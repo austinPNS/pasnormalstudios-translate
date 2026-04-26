@@ -9,6 +9,7 @@ export type DocType =
   | 'category'
   | 'feature'
   | 'frontpage'
+  | 'hero'
   | 'block';
 
 export interface Lang {
@@ -121,7 +122,7 @@ export interface FreeTextPreset {
 
 export type Tweaks = {
   layout: 'matrix' | 'list' | 'kanban';
-  diffMode: 'side' | 'overlay' | 'diff';
+  diffMode: 'side' | 'diff';
   nav: 'sidebar' | 'topbar';
   density: 'compact' | 'comfortable';
 };

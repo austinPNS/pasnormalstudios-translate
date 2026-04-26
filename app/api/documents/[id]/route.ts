@@ -29,7 +29,12 @@ export async function GET(
       );
     }
 
-    const projection = buildDetailProjection(config.fields);
+    const projection = buildDetailProjection(
+      config.fields,
+      config.nestedArrays,
+      config.i18nArrays,
+      config.polymorphicArrays
+    );
     const row = await sanityQuery<Record<string, unknown> | null>(
       `*[_id == $id || _id == "drafts." + $id][0] ${projection}`,
       { id }

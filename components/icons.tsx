@@ -221,5 +221,6 @@ export const DOC_ICONS: Record<string, (p: P) => JSX.Element> = {
   category: IcCategory,
   feature: IcFeature,
   frontpage: IcFrontpage,
+  hero: IcFrontpage,
   block: IcBlock,
 };

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { BulkModal } from '@/components/bulk-modal';
 import { IcSearch } from '@/components/icons';
 import { Kbd } from '@/components/primitives';
-import { DocumentsScreen } from '@/components/screens/documents';
+import { DocumentsScreen, type DocsFilter } from '@/components/screens/documents';
 import { FreeTextScreen } from '@/components/screens/free-text';
 import { GlossaryScreen } from '@/components/screens/glossary';
 import { JobsScreen } from '@/components/screens/jobs';
@@ -31,6 +31,8 @@ export default function App() {
   const [docs, setDocs] = useState<DocRecord[]>([]);
   const [docsLoading, setDocsLoading] = useState(true);
   const [docsError, setDocsError] = useState<string | null>(null);
+  const [docsFilter, setDocsFilter] = useState<DocsFilter>('product');
+  const [docsSearch, setDocsSearch] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -84,6 +86,21 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    const onPop = (e: PopStateEvent) => {
+      const s = e.state as { pnsViewerDoc?: string } | null;
+      if (s?.pnsViewerDoc) {
+        setDocId(s.pnsViewerDoc);
+        setRoute('viewer');
+      } else {
+        setDocId(null);
+        setRoute('documents');
+      }
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+
+  useEffect(() => {
     window.parent.postMessage({ type: '__edit_mode_set_keys', edits: tweaks }, '*');
   }, [tweaks]);
 
@@ -96,10 +113,15 @@ export default function App() {
   const openDoc = (id: string) => {
     setDocId(id);
     setRoute('viewer');
+    window.history.pushState({ pnsViewerDoc: id }, '');
   };
   const back = () => {
-    setDocId(null);
-    setRoute('documents');
+    if (window.history.state?.pnsViewerDoc) {
+      window.history.back();
+    } else {
+      setDocId(null);
+      setRoute('documents');
+    }
   };
   const bulk = (ids: string[]) => {
     setBulkInitial(ids);
@@ -116,6 +138,10 @@ export default function App() {
           error={docsError}
           onOpenDoc={openDoc}
           onBulk={bulk}
+          filter={docsFilter}
+          setFilter={setDocsFilter}
+          search={docsSearch}
+          setSearch={setDocsSearch}
         />
       );
     if (route === 'viewer')

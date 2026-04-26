@@ -2,6 +2,7 @@ const PROJECT_ID = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID;
 const DATASET = process.env.NEXT_PUBLIC_SANITY_DATASET;
 const API_VERSION = process.env.NEXT_PUBLIC_SANITY_API_VERSION;
 const VIEW_TOKEN = process.env.SECRET_SANITY_VIEW_TOKEN;
+const ADMIN_TOKEN = process.env.SECRET_SANITY_ADMIN_TOKEN;
 
 export class SanityConfigError extends Error {}
 export class SanityQueryError extends Error {
@@ -52,4 +53,42 @@ export async function sanityQuery<T>(
 
   const json = (await res.json()) as { result: T };
   return json.result;
+}
+
+export type SanityMutation =
+  | { patch: { id: string; set?: Record<string, unknown>; setIfMissing?: Record<string, unknown> } }
+  | { create: Record<string, unknown> }
+  | { delete: { id: string } };
+
+export async function sanityMutate<T = unknown>(mutations: SanityMutation[]): Promise<T> {
+  if (!PROJECT_ID || !DATASET || !API_VERSION) {
+    throw new SanityConfigError(
+      'Missing Sanity config. Set NEXT_PUBLIC_SANITY_PROJECT_ID, NEXT_PUBLIC_SANITY_DATASET, NEXT_PUBLIC_SANITY_API_VERSION.'
+    );
+  }
+  if (!ADMIN_TOKEN) {
+    throw new SanityConfigError('Missing SECRET_SANITY_ADMIN_TOKEN — required for write operations.');
+  }
+
+  const url = `https://${PROJECT_ID}.api.sanity.io/v${API_VERSION}/data/mutate/${DATASET}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${ADMIN_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ mutations }),
+    cache: 'no-store',
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new SanityQueryError(
+      `Sanity mutate failed: ${res.status} ${res.statusText}`,
+      res.status,
+      body
+    );
+  }
+
+  return (await res.json()) as T;
 }

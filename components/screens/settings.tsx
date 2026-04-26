@@ -76,23 +76,7 @@ export const SettingsScreen = () => {
           <div className="setting-row">
             <div className="label">Default model</div>
             <div className="control">
-              <div className="field wide">
-                <select defaultValue="gpt-4.1-mini">
-                  <option>gpt-4.1-mini</option>
-                  <option>gpt-4.1</option>
-                  <option>claude-sonnet-4-5</option>
-                </select>
-              </div>
-            </div>
-          </div>
-          <div className="setting-row">
-            <div className="label">
-              Temperature
-              <div className="sub">Lower = more literal, higher = more liberal</div>
-            </div>
-            <div className="control" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <input type="range" min="0" max="100" defaultValue="20" style={{ flex: 1 }} />
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 12 }}>0.20</span>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 12 }}>claude-opus-4-7</span>
             </div>
           </div>
           <div className="setting-row">
