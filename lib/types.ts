@@ -28,6 +28,8 @@ export interface DocRecord {
   id: string;
   title: string;
   type: DocType;
+  // Actual Sanity `_type` (e.g. `feature.product`) — needed for intent URLs.
+  sanityType: string;
   updated: string;
   author: string;
   langs: Record<LangCode, DocLangState>;

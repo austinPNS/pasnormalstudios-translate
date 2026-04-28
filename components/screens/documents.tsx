@@ -1,16 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { LANGS } from '@/lib/data';
 import type { DocRecord, LangCode, Tweaks } from '@/lib/types';
+import { getStudioUrl } from '@/lib/studio-url';
 import {
   IcArrow,
   IcChevron,
-  IcFilter,
   IcMore,
+  IcOpen,
   IcPlus,
   IcSearch,
-  IcSliders,
   IcSync,
   IcX,
 } from '../icons';
@@ -70,12 +70,6 @@ export const DocumentsScreen = ({ layout, docs, loading, error, onOpenDoc, onBul
           <button className="btn">
             <IcSync /> Sync from Sanity
           </button>
-          <button
-            className="btn primary"
-            onClick={() => onBulk(Array.from(selected))}
-          >
-            <IcPlus /> Bulk translate
-          </button>
         </div>
       </div>
 
@@ -104,15 +98,6 @@ export const DocumentsScreen = ({ layout, docs, loading, error, onOpenDoc, onBul
           />
         </div>
         <div className="spacer" />
-        <button className="btn ghost sm">
-          <IcFilter /> Type: any
-        </button>
-        <button className="btn ghost sm">
-          <IcFilter /> Updated: any
-        </button>
-        <button className="btn ghost sm">
-          <IcSliders /> Columns
-        </button>
       </div>
 
       {error && (
@@ -149,10 +134,8 @@ export const DocumentsScreen = ({ layout, docs, loading, error, onOpenDoc, onBul
         <div className="selection-bar">
           <span className="count">{selected.size} selected</span>
           <span className="sep" />
-          <button className="btn">Assign reviewer</button>
-          <button className="btn">Set status</button>
           <button className="btn accent" onClick={() => onBulk(Array.from(selected))}>
-            <IcPlus size={13} /> Translate to…
+            <IcPlus size={13} /> Bulk Translate
           </button>
           <button
             className="btn"
@@ -164,6 +147,96 @@ export const DocumentsScreen = ({ layout, docs, loading, error, onOpenDoc, onBul
         </div>
       )}
     </>
+  );
+};
+
+interface MenuPos {
+  id: string;
+  sanityType: string;
+  x: number;
+  y: number;
+}
+
+const RowActionMenu = ({
+  pos,
+  onClose,
+}: {
+  pos: MenuPos;
+  onClose: () => void;
+}) => {
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    const onDown = () => onClose();
+    window.addEventListener('keydown', onKey);
+    // Use mousedown so clicks anywhere outside (incl. the same icon to toggle) close us first.
+    window.addEventListener('mousedown', onDown);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('mousedown', onDown);
+    };
+  }, [onClose]);
+
+  const onCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(pos.id);
+      setCopied(true);
+      setTimeout(onClose, 600);
+    } catch {
+      onClose();
+    }
+  };
+
+  const itemStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    padding: '8px 10px',
+    width: '100%',
+    background: 'transparent',
+    border: 0,
+    cursor: 'pointer',
+    fontSize: 13,
+    textAlign: 'left',
+    color: 'var(--ink)',
+    textDecoration: 'none',
+    borderRadius: 4,
+  };
+
+  return (
+    <div
+      onClick={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+      style={{
+        position: 'fixed',
+        top: pos.y,
+        left: pos.x,
+        background: 'var(--bg)',
+        border: '1px solid var(--line)',
+        borderRadius: 6,
+        boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+        zIndex: 200,
+        minWidth: 180,
+        padding: 4,
+      }}
+    >
+      <button type="button" onClick={onCopy} style={itemStyle}>
+        {copied ? 'Copied!' : 'Copy ID'}
+      </button>
+      <a
+        href={getStudioUrl(pos.id, pos.sanityType)}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={onClose}
+        style={itemStyle}
+      >
+        <span style={{ flex: 1 }}>Open in Sanity</span>
+        <IcOpen size={12} />
+      </a>
+    </div>
   );
 };
 
@@ -182,6 +255,18 @@ const DocsMatrix = ({
 }) => {
   const allOn = selected.size === docs.length && docs.length > 0;
   const some = selected.size > 0 && !allOn;
+  const [menu, setMenu] = useState<MenuPos | null>(null);
+
+  const openMenu = (e: React.MouseEvent, id: string, sanityType: string) => {
+    e.stopPropagation();
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    // Anchor below-right of the icon. Clamp within viewport.
+    const menuW = 180;
+    const x = Math.min(rect.right - menuW, window.innerWidth - menuW - 8);
+    const y = rect.bottom + 4;
+    setMenu({ id, sanityType, x: Math.max(8, x), y });
+  };
+
   return (
     <div className="matrix-wrap">
       <table className="matrix">
@@ -230,12 +315,29 @@ const DocsMatrix = ({
               })}
               <td className="updated">{d.updated}</td>
               <td className="actions">
-                <IcMore />
+                <button
+                  type="button"
+                  className="row-action-btn"
+                  aria-label="Row actions"
+                  onClick={(e) => openMenu(e, d.id, d.sanityType)}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  style={{
+                    background: 'transparent',
+                    border: 0,
+                    padding: 4,
+                    cursor: 'pointer',
+                    color: 'inherit',
+                    display: 'inline-flex',
+                  }}
+                >
+                  <IcMore />
+                </button>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+      {menu && <RowActionMenu pos={menu} onClose={() => setMenu(null)} />}
     </div>
   );
 };

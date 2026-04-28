@@ -3,8 +3,9 @@
 import { Fragment, useEffect, useState } from 'react';
 import { LANGS } from '@/lib/data';
 import { fetchDocument } from '@/lib/client-storage';
+import { getStudioUrl } from '@/lib/studio-url';
 import type { ImageItem, LangCode, SampleDoc, Tweaks } from '@/lib/types';
-import { IcArrow, IcBlock, IcOpen, IcPlay, IcSync } from '../icons';
+import { IcArrow, IcBlock, IcOpen, IcPlay } from '../icons';
 import { FieldType, LangChip } from '../primitives';
 
 interface Props {
@@ -114,12 +115,14 @@ export const ViewerScreen = ({ docId, target, setTarget, diffMode, setDiffMode, 
         </div>
         <div style={{ flex: 1 }} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button className="btn">
+          <a
+            className="btn"
+            href={getStudioUrl(doc.id, doc.sanityType)}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             <IcOpen /> Open in Sanity
-          </button>
-          <button className="btn accent">
-            <IcSync /> Sync to Sanity
-          </button>
+          </a>
         </div>
       </div>
 

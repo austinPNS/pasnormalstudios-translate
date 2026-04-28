@@ -1,21 +1,36 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { IcArrow, IcCheck, IcHistory, IcPlay, IcPrompt, IcSync } from '../icons';
+import { IcArrow, IcCheck, IcCopy, IcPlay, IcPrompt } from '../icons';
 import { LangChip } from '../primitives';
-import { FREE_TEXT_PRESETS, GLOSSARY, LANGS } from '@/lib/data';
+import { LANGS } from '@/lib/data';
+import { PROTECTED_GLOSSARY } from '@/lib/protected-terms';
+import { freeTextTranslate } from '@/lib/client-storage';
 import type { LangCode } from '@/lib/types';
 
 type TargetLang = Exclude<LangCode, 'en'>;
 
 export const FreeTextScreen = () => {
-  const [presetId, setPresetId] = useState(FREE_TEXT_PRESETS[0].id);
   const [sourceLang, setSourceLang] = useState<LangCode>('en');
   const [target, setTarget] = useState<TargetLang>('de');
-  const [sourceText, setSourceText] = useState(FREE_TEXT_PRESETS[0].sourceText);
-  const [outputText, setOutputText] = useState(FREE_TEXT_PRESETS[0].outputs.de);
+  const [sourceText, setSourceText] = useState('');
+  const [outputText, setOutputText] = useState('');
+  const [notes, setNotes] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
-  const preset = FREE_TEXT_PRESETS.find((item) => item.id === presetId) ?? FREE_TEXT_PRESETS[0];
+  const handleCopy = async () => {
+    if (!outputText) return;
+    try {
+      await navigator.clipboard.writeText(outputText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // Clipboard write can fail in unfocused iframes / older browsers — silently no-op.
+    }
+  };
+
   const availableTargets = LANGS.filter(
     (lang): lang is (typeof LANGS)[number] & { code: TargetLang } => !lang.source && lang.code !== sourceLang
   );
@@ -28,42 +43,34 @@ export const FreeTextScreen = () => {
 
   const glossaryHits = useMemo(() => {
     const haystack = sourceText.toLowerCase();
-    return GLOSSARY.filter((entry) => haystack.includes(entry.src.toLowerCase()))
-      .slice(0, 6)
+    return PROTECTED_GLOSSARY.filter((entry) => haystack.includes(entry.src.toLowerCase()))
+      .slice(0, 12)
       .map((entry) => entry.src);
   }, [sourceText]);
 
-  const rules = useMemo(
-    () => [
-      'Use the saved prompt rules for the selected target language.',
-      'Keep glossary protected terms unchanged when they appear in the source text.',
-      'Return a natural translation suitable for internal review before publishing.',
-    ],
-    []
-  );
-
-  const loadPreset = (nextPresetId: string) => {
-    const nextPreset = FREE_TEXT_PRESETS.find((item) => item.id === nextPresetId) ?? FREE_TEXT_PRESETS[0];
-    setPresetId(nextPreset.id);
-    setSourceLang('en');
-    setSourceText(nextPreset.sourceText);
-    setOutputText(nextPreset.outputs[target] ?? nextPreset.outputs.de);
-  };
-
-  const translateMock = () => {
+  const handleTranslate = async () => {
     const trimmed = sourceText.trim();
+    setError(null);
+    setNotes([]);
     if (!trimmed) {
       setOutputText('');
       return;
     }
-    if (sourceLang === 'en' && trimmed === preset.sourceText) {
-      setOutputText(preset.outputs[target]);
+    if (sourceLang === target) {
+      setOutputText(trimmed);
       return;
     }
-
-    const prefix =
-      sourceLang === target ? 'No translation needed.' : `${sourceLang.toUpperCase()} -> ${target.toUpperCase()} mock`;
-    setOutputText(`${prefix}: ${trimmed}`);
+    setLoading(true);
+    try {
+      const result = await freeTextTranslate(trimmed, target);
+      setOutputText(result.translation);
+      setNotes(result.notes ?? []);
+    } catch (err) {
+      setOutputText('');
+      setError(err instanceof Error ? err.message : 'Translation failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -77,14 +84,12 @@ export const FreeTextScreen = () => {
         </div>
         <div className="spacer" />
         <div className="page-actions">
-          <button className="btn">
-            <IcHistory /> History
-          </button>
-          <button className="btn" onClick={() => loadPreset(preset.id)}>
-            <IcSync /> Load sample
-          </button>
-          <button className="btn primary" onClick={translateMock}>
-            <IcPlay /> Translate text
+          <button
+            className="btn primary"
+            onClick={handleTranslate}
+            disabled={loading || !sourceText.trim()}
+          >
+            <IcPlay /> {loading ? 'Translating…' : 'Translate text'}
           </button>
         </div>
       </div>
@@ -130,15 +135,6 @@ export const FreeTextScreen = () => {
                   <LangChip code={sourceLang} source={sourceLang === 'en'} />
                   <span className="panel-title">Source text</span>
                 </div>
-                <div className="field wide free-text-select">
-                  <select value={presetId} onChange={(e) => loadPreset(e.target.value)}>
-                    {FREE_TEXT_PRESETS.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
               </div>
               <textarea
                 className="free-text-area"
@@ -158,14 +154,37 @@ export const FreeTextScreen = () => {
                   <LangChip code={target} />
                   <span className="panel-title">Prompt-based output</span>
                 </div>
-                <span className="status-pill approved">
-                  <span className="dot approved" />
-                  Mock result
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {error ? (
+                    <span className="status-pill">
+                      <span className="dot" />
+                      Error
+                    </span>
+                  ) : outputText ? (
+                    <span className="status-pill approved">
+                      <span className="dot approved" />
+                      Translated
+                    </span>
+                  ) : null}
+                  <button
+                    className="btn"
+                    onClick={handleCopy}
+                    disabled={!outputText}
+                    title="Copy translation"
+                  >
+                    {copied ? <IcCheck /> : <IcCopy />}
+                    {copied ? 'Copied' : 'Copy'}
+                  </button>
+                </div>
               </div>
-              <textarea className="free-text-area" value={outputText} readOnly />
+              <textarea
+                className="free-text-area"
+                value={error ?? outputText}
+                readOnly
+                placeholder={loading ? 'Translating…' : 'Output will appear here.'}
+              />
               <div className="free-text-meta">
-                <span className="chip mono">model: gpt-4.1-mini</span>
+                <span className="chip mono">model: claude-opus-4-7</span>
                 <span>Glossary enforced</span>
               </div>
             </div>
@@ -175,14 +194,24 @@ export const FreeTextScreen = () => {
             <div className="insight-card">
               <div className="insight-hd">
                 <IcPrompt />
-                <span>Prompt rules used</span>
+                <span>Translation notes</span>
               </div>
               <div className="insight-list">
-                {rules.map((rule) => (
-                  <span key={rule} className="chip">
-                    {rule}
+                {notes.length > 0 ? (
+                  notes.map((note, i) => (
+                    <span key={i} className="chip">
+                      {note}
+                    </span>
+                  ))
+                ) : (
+                  <span className="free-text-empty">
+                    {loading
+                      ? 'Generating notes…'
+                      : outputText
+                        ? 'No notes for this translation.'
+                        : 'Translate to see the model’s reasoning.'}
                   </span>
-                ))}
+                )}
               </div>
             </div>
 

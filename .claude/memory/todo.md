@@ -1,46 +1,42 @@
 ---
 name: TODO — Sanity integration outstanding work
-description: Remaining work to finish connecting pns-translate to Sanity — Phase 3B (nested arrays in viewer) and Phase 4 (writes, jobs, stale detection, editing).
+description: Remaining work to finish connecting pns-translate to Sanity. Phase 4 = write path. Today's status — only the publish endpoint left.
 type: project
 ---
 
 # TODO — Outstanding Work
 
-As of 2026-04-24. Phases 1, 2, and 3A are complete — see [sanity-integration-plan.md](sanity-integration-plan.md) for what shipped. What's below is what's still mock or stubbed.
+As of 2026-04-28 (updated). Phases 1, 2, 3A, 3B all shipped — see [sanity-integration-plan.md](sanity-integration-plan.md).
 
-## Phase 3B — Nested arrays in the viewer
+## Shipped today
 
-**Why:** Phase 3A only handles flat fields (i18n.string, i18n.text, portable text). uberProduct and pnsCollection have repeating groups that the viewer doesn't render yet.
+- **Bulk translate** end-to-end: [/api/bulk-translate](app/api/bulk-translate/route.ts) does single-query-per-type fetch, draft-aware patching, single-mutate write, with SSE progress streaming and prompt-cache warming (first call alone, then parallel — see [feedback-prompt-cache-warming.md](feedback-prompt-cache-warming.md)).
+- **Portable text auto-translate**: [/api/translate](app/api/translate/route.ts) + bulk both rebuild block arrays with translated span text (preserves every `_key` per feedback rule #2).
+- **Open in Sanity** wired in row menu and viewer header — uses intent URLs (`<base>/intent/edit/id=<id>;type=<type>`). Configure base via `NEXT_PUBLIC_SANITY_STUDIO_URL`.
+- **Viewer cleanup**: removed "Sync to Sanity" stub.
+- **Documents toolbar cleanup**: removed `Type: any`, `Updated: any`, `Columns` ghost buttons.
+- **Sidebar cleanup**: removed Jobs nav (mock screen wasn't useful).
 
-**How to apply:** Add a `kind: 'nestedArray'` or similar to [lib/translatable-fields.ts](lib/translatable-fields.ts), teach `buildDetailProjection` to project array elements with their `_key`, and extend [lib/document-mapper.ts](lib/document-mapper.ts) to emit one `FieldBlock` per array item using the EN title/name as the item label. No viewer UI changes needed — each array item becomes a `FieldItem` row.
+## Next up
 
-- **uberProduct:**
-  - `specifications[].description` (portable text per item; use `specifications[].title.en` as the row label)
-  - `features[].title` + `features[].text`
-  - `impactFeatures[].title` + `impactFeatures[].text`
-  - `testimonials[].name` + `testimonials[].role` + `testimonials[].quote`
-- **pnsCollection:**
-  - `collectionFeatures*.features[].title` + `.text`
-  - Gallery titles
-  - CTA button titles
+### `/api/publish` endpoint
 
-## Phase 4 — Write path + status
-
-**Why:** Viewer is read-only, all write/approve UI is stubbed, jobs screen is mock. Closing this is the full translation loop.
+**Why:** Translations currently land as drafts and sit there. Editors have to publish manually in Sanity Studio. An app-side publish closes the loop.
 
 **How to apply:**
-- `/api/translate` endpoint — audit + translate + batch patch. Must use draft-aware pattern (feedback rule #5): check `*[_id in ["drafts.doc-1", …]]{_id}` before mutating, patch `drafts.{id}` if it exists, else `{id}`.
-- `/api/publish` endpoint — batch publish via Sanity HTTP API mutate.
-- Stale detection on list/detail endpoints: `translationMeta.lastTranslatedAt < _updatedAt` → status `'stale'`.
-- Wire viewer header buttons: "Sync to Sanity", "Re-run", "Approve", "History", "Open in Sanity".
-- Real jobs: replace mock `JOBS` in [lib/data.ts](lib/data.ts) with a jobs store (could be another JSON file via [lib/server-storage.ts](lib/server-storage.ts) pattern) + endpoint.
+- Endpoint accepts `{ docIds: string[] }` (and maybe `targets` if we want per-language publish, but Sanity publishes whole docs).
+- Use the **draft-aware** pattern (feedback rule #5): pre-check `*[_id in ["drafts.<id>", ...]]{ _id }`. For each draft, mutate with `createOrReplace` to copy `drafts.<id>` → `<id>`, then `delete` the draft. (This is how Sanity Studio's "Publish" button works under the hood.)
+- One Sanity mutate call with all create/replace + delete operations.
+- UI entry point: a "Publish" button somewhere — likely on the documents list selection bar (next to "Bulk Translate") or a row action.
 
-## Portable text editing (part of Phase 4)
+## Decided not needed
 
-**Why:** Read-only works for review, but translators need to edit inline. The patch must preserve EN block structure exactly — same `_key` per block and per span, same block/span count, never markdown (feedback rule #2).
+- Re-run / Approve / History buttons in viewer header — user confirmed not needed (2026-04-28).
+- Inline portable text editing in the viewer — user confirmed not needed (2026-04-28).
+- Stale detection on the list endpoint — scaffolding exists in UI but compute layer skipped (user confirmed not needed for now, 2026-04-28).
+- Real jobs store + Jobs screen — Jobs nav removed; bulk modal shows progress directly.
 
-**How to apply:** Carry the raw block array alongside the flattened string in the `SampleDoc` shape (e.g., a `raw?: unknown` on `FieldItem`). Use it as the edit target. On patch, build the DE block array by copying the EN structure and replacing span `text` values only.
+## Unrelated loose end
 
-## Other uncommitted work (not Sanity-related)
-
-- `components/screens/free-text.tsx` is wired into [app/page.tsx](app/page.tsx) but the file itself is untracked in git. Either commit it separately or drop it. Not in scope for the Sanity track.
+- `components/screens/free-text.tsx` is wired into [app/page.tsx](app/page.tsx) but the file itself is untracked in git. Either commit or drop. Not in scope of the Sanity track.
+- `components/screens/jobs.tsx` and the `JOBS` mock in [lib/data.ts](lib/data.ts) are now unreachable (Jobs nav removed). Safe to delete on next cleanup pass.

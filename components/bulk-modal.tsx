@@ -2,50 +2,119 @@
 
 import { useState } from 'react';
 import { LANGS } from '@/lib/data';
+import {
+  bulkTranslate,
+  type BulkTranslateDocResult,
+  type BulkTranslateResponse,
+} from '@/lib/client-storage';
 import type { DocRecord, LangCode } from '@/lib/types';
 import { IcPlay, IcX } from './icons';
-import { Check, DocTypeBadge, LangChip, Switch } from './primitives';
+import { Check, DocTypeBadge, LangChip } from './primitives';
 
 interface Props {
   initialSel: string[];
   docs: DocRecord[];
   onClose: () => void;
-  onSubmit: () => void;
+  onDone: (response: BulkTranslateResponse) => void;
 }
 
-export const BulkModal = ({ initialSel, docs, onClose, onSubmit }: Props) => {
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+interface RunningState {
+  status: 'running';
+  phase: string;
+  done: number;
+  total: number;
+  results: BulkTranslateDocResult[];
+}
+
+type RunState =
+  | { status: 'idle' }
+  | RunningState
+  | { status: 'done'; response: BulkTranslateResponse }
+  | { status: 'error'; message: string };
+
+export const BulkModal = ({ initialSel, docs, onClose, onDone }: Props) => {
+  const [step, setStep] = useState<1 | 2>(1);
   const [sel, setSel] = useState<Set<string>>(new Set(initialSel));
-  const [targets, setTargets] = useState<Set<LangCode>>(new Set<LangCode>(['fr', 'it']));
-  const [skipExisting, setSkipExisting] = useState(true);
+  const [targets, setTargets] = useState<Set<Exclude<LangCode, 'en'>>>(
+    new Set<Exclude<LangCode, 'en'>>(['de'])
+  );
+  const [run, setRun] = useState<RunState>({ status: 'idle' });
+
+  const selectedDocs = docs.filter((d) => sel.has(d.id));
 
   const toggleDoc = (id: string) => {
     const n = new Set(sel);
     n.has(id) ? n.delete(id) : n.add(id);
     setSel(n);
   };
-  const toggleTarget = (code: LangCode) => {
+  const toggleTarget = (code: Exclude<LangCode, 'en'>) => {
     const n = new Set(targets);
     n.has(code) ? n.delete(code) : n.add(code);
     setTargets(n);
   };
 
-  const fieldsEst = sel.size * targets.size * 12;
-  const timeEst = Math.max(15, Math.round(fieldsEst * 0.8));
+  const submit = async () => {
+    setRun({
+      status: 'running',
+      phase: 'Starting…',
+      done: 0,
+      total: sel.size * targets.size,
+      results: [],
+    });
+    try {
+      const response = await bulkTranslate(
+        Array.from(sel),
+        Array.from(targets),
+        (e) => {
+          if (e.type === 'phase') {
+            setRun((s) =>
+              s.status === 'running' ? { ...s, phase: e.message } : s
+            );
+          } else if (e.type === 'start') {
+            setRun((s) =>
+              s.status === 'running'
+                ? { ...s, total: e.total, phase: 'Translating…' }
+                : s
+            );
+          } else if (e.type === 'progress') {
+            setRun((s) =>
+              s.status === 'running'
+                ? {
+                    ...s,
+                    done: e.done,
+                    total: e.total,
+                    results: [...s.results, e.result],
+                  }
+                : s
+            );
+          }
+        }
+      );
+      setRun({ status: 'done', response });
+    } catch (e) {
+      setRun({
+        status: 'error',
+        message: e instanceof Error ? e.message : 'Unknown error',
+      });
+    }
+  };
+
+  const totalJobs = sel.size * targets.size;
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="hd">
           <div>
-            <h2>Bulk translate</h2>
+            <h2>Bulk Translate</h2>
             <div className="sub">
-              Step {step} of 3 —{' '}
-              {step === 1
-                ? 'choose documents'
-                : step === 2
-                ? 'target languages'
-                : 'review & run'}
+              {run.status === 'running' && 'Translating…'}
+              {run.status === 'done' && 'Result'}
+              {run.status === 'error' && 'Error'}
+              {run.status === 'idle' &&
+                `Step ${step} of 2 — ${
+                  step === 1 ? 'review selected documents' : 'target languages'
+                }`}
             </div>
           </div>
           <div style={{ flex: 1 }} />
@@ -55,10 +124,10 @@ export const BulkModal = ({ initialSel, docs, onClose, onSubmit }: Props) => {
         </div>
 
         <div className="bd">
-          {step === 1 && (
+          {run.status === 'idle' && step === 1 && (
             <>
               <div style={{ fontSize: 12.5, color: 'var(--ink-3)', marginBottom: 10 }}>
-                {sel.size} of {docs.length} selected
+                {sel.size} document{sel.size === 1 ? '' : 's'} selected
               </div>
               <div
                 style={{
@@ -68,21 +137,19 @@ export const BulkModal = ({ initialSel, docs, onClose, onSubmit }: Props) => {
                   overflow: 'auto',
                 }}
               >
-                {docs.map((d) => (
+                {selectedDocs.map((d) => (
                   <div
                     key={d.id}
-                    onClick={() => toggleDoc(d.id)}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
                       gap: 10,
                       padding: '8px 12px',
                       borderBottom: '1px solid var(--line)',
-                      cursor: 'pointer',
-                      background: sel.has(d.id) ? 'var(--accent-bg)' : 'transparent',
+                      background: 'var(--accent-bg)',
                     }}
                   >
-                    <Check on={sel.has(d.id)} onClick={() => toggleDoc(d.id)} />
+                    <Check on={true} onClick={() => toggleDoc(d.id)} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 13, fontWeight: 500 }}>{d.title}</div>
                       <div
@@ -98,11 +165,23 @@ export const BulkModal = ({ initialSel, docs, onClose, onSubmit }: Props) => {
                     <DocTypeBadge type={d.type} />
                   </div>
                 ))}
+                {selectedDocs.length === 0 && (
+                  <div
+                    style={{
+                      padding: 16,
+                      fontSize: 12,
+                      color: 'var(--ink-4)',
+                      textAlign: 'center',
+                    }}
+                  >
+                    No documents selected.
+                  </div>
+                )}
               </div>
             </>
           )}
 
-          {step === 2 && (
+          {run.status === 'idle' && step === 2 && (
             <>
               <div style={{ fontSize: 12.5, color: 'var(--ink-3)' }}>
                 Choose target languages
@@ -111,12 +190,12 @@ export const BulkModal = ({ initialSel, docs, onClose, onSubmit }: Props) => {
                 {LANGS.filter((l) => !l.source).map((l) => (
                   <div
                     key={l.code}
-                    className={`lang-cb ${targets.has(l.code) ? 'on' : ''}`}
-                    onClick={() => toggleTarget(l.code)}
+                    className={`lang-cb ${targets.has(l.code as Exclude<LangCode, 'en'>) ? 'on' : ''}`}
+                    onClick={() => toggleTarget(l.code as Exclude<LangCode, 'en'>)}
                   >
                     <Check
-                      on={targets.has(l.code)}
-                      onClick={() => toggleTarget(l.code)}
+                      on={targets.has(l.code as Exclude<LangCode, 'en'>)}
+                      onClick={() => toggleTarget(l.code as Exclude<LangCode, 'en'>)}
                     />
                     <div className="flag">{l.code.toUpperCase()}</div>
                     <div>
@@ -126,34 +205,122 @@ export const BulkModal = ({ initialSel, docs, onClose, onSubmit }: Props) => {
                   </div>
                 ))}
               </div>
+            </>
+          )}
 
-              <div className="section-label" style={{ marginTop: 20 }}>
-                Options
-              </div>
+          {run.status === 'running' && (
+            <>
               <div
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 10,
-                  padding: '10px 0',
+                  gap: 12,
+                  marginBottom: 12,
                 }}
               >
-                <Switch on={skipExisting} onChange={setSkipExisting} />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 500 }}>Skip already approved</div>
-                  <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>
-                    Only translate fields that are missing or out-of-sync
-                  </div>
+                <div
+                  style={{
+                    flex: 1,
+                    height: 6,
+                    background: 'var(--bg-3)',
+                    borderRadius: 3,
+                    overflow: 'hidden',
+                  }}
+                >
+                  <div
+                    style={{
+                      width: `${run.total === 0 ? 0 : (run.done / run.total) * 100}%`,
+                      height: '100%',
+                      background: 'var(--ink)',
+                      transition: 'width 120ms ease-out',
+                    }}
+                  />
                 </div>
+                <div
+                  style={{
+                    fontFamily: 'var(--mono)',
+                    fontSize: 12,
+                    color: 'var(--ink-3)',
+                    minWidth: 56,
+                    textAlign: 'right',
+                  }}
+                >
+                  {run.done}/{run.total}
+                </div>
+              </div>
+              <div
+                style={{
+                  fontSize: 12,
+                  color: 'var(--ink-3)',
+                  marginBottom: 10,
+                }}
+              >
+                {run.phase}
+              </div>
+              <div
+                style={{
+                  border: '1px solid var(--line)',
+                  borderRadius: 6,
+                  maxHeight: 240,
+                  overflow: 'auto',
+                }}
+              >
+                {run.results.length === 0 && (
+                  <div
+                    style={{
+                      padding: 16,
+                      fontSize: 12,
+                      color: 'var(--ink-4)',
+                      textAlign: 'center',
+                    }}
+                  >
+                    Waiting for first result…
+                  </div>
+                )}
+                {run.results.map((r, i) => (
+                  <div
+                    key={`${r.docId}-${r.target}-${i}`}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      padding: '8px 12px',
+                      borderBottom: '1px solid var(--line)',
+                      fontSize: 12,
+                    }}
+                  >
+                    <LangChip code={r.target} />
+                    <code style={{ fontFamily: 'var(--mono)', flex: 1, minWidth: 0 }}>
+                      {r.docId}
+                    </code>
+                    {r.status === 'translated' && (
+                      <span style={{ color: 'var(--ok, #2a8)' }}>
+                        {r.fieldsSet} field{r.fieldsSet === 1 ? '' : 's'}
+                      </span>
+                    )}
+                    {r.status === 'nothing' && (
+                      <span style={{ color: 'var(--ink-4)' }}>nothing missing</span>
+                    )}
+                    {r.status === 'error' && (
+                      <span style={{ color: 'var(--err, #c33)' }}>error</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div
+                style={{
+                  fontSize: 11,
+                  color: 'var(--ink-4)',
+                  marginTop: 10,
+                }}
+              >
+                Do not close the window.
               </div>
             </>
           )}
 
-          {step === 3 && (
+          {run.status === 'done' && (
             <>
-              <div className="section-label" style={{ marginTop: 0 }}>
-                Summary
-              </div>
               <div
                 style={{
                   border: '1px solid var(--line)',
@@ -162,95 +329,147 @@ export const BulkModal = ({ initialSel, docs, onClose, onSubmit }: Props) => {
                   fontSize: 13,
                   lineHeight: 1.8,
                   background: 'var(--bg-1)',
+                  marginBottom: 12,
                 }}
               >
                 <div>
-                  <span style={{ color: 'var(--ink-3)', width: 120, display: 'inline-block' }}>
-                    Documents
+                  <span style={{ color: 'var(--ink-3)', width: 160, display: 'inline-block' }}>
+                    Mutations applied
                   </span>
-                  <span style={{ fontWeight: 500 }}>{sel.size}</span>
+                  <span style={{ fontFamily: 'var(--mono)' }}>{run.response.mutationsApplied}</span>
                 </div>
                 <div>
-                  <span style={{ color: 'var(--ink-3)', width: 120, display: 'inline-block' }}>
-                    Target languages
+                  <span style={{ color: 'var(--ink-3)', width: 160, display: 'inline-block' }}>
+                    Total fields set
                   </span>
-                  {Array.from(targets).map((c, i) => (
-                    <span key={c}>
-                      {i > 0 && ' '}
-                      <LangChip code={c} />
-                    </span>
-                  ))}
+                  <span style={{ fontFamily: 'var(--mono)' }}>{run.response.totalFieldsSet}</span>
                 </div>
                 <div>
-                  <span style={{ color: 'var(--ink-3)', width: 120, display: 'inline-block' }}>
-                    Total fields
-                  </span>
-                  <span style={{ fontFamily: 'var(--mono)' }}>~{fieldsEst}</span>
-                </div>
-                <div>
-                  <span style={{ color: 'var(--ink-3)', width: 120, display: 'inline-block' }}>
-                    Estimated time
+                  <span style={{ color: 'var(--ink-3)', width: 160, display: 'inline-block' }}>
+                    Cache reads / writes
                   </span>
                   <span style={{ fontFamily: 'var(--mono)' }}>
-                    ~{Math.floor(timeEst / 60)}m {timeEst % 60}s
+                    {run.response.usage.cacheReadTokens} / {run.response.usage.cacheCreationTokens}
                   </span>
-                </div>
-                <div>
-                  <span style={{ color: 'var(--ink-3)', width: 120, display: 'inline-block' }}>
-                    Skip approved
-                  </span>
-                  <span>{skipExisting ? 'Yes' : 'No'}</span>
                 </div>
               </div>
               <div
                 style={{
-                  fontSize: 12,
-                  color: 'var(--ink-3)',
-                  marginTop: 12,
-                  lineHeight: 1.6,
+                  border: '1px solid var(--line)',
+                  borderRadius: 6,
+                  maxHeight: 240,
+                  overflow: 'auto',
                 }}
               >
-                Jobs run in the background. You can keep working. Translations land in{' '}
-                <strong>Needs review</strong> status by default — you'll review and approve before
-                they sync back to Sanity.
+                {run.response.results.map((r, i) => (
+                  <div
+                    key={`${r.docId}-${r.target}-${i}`}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      padding: '8px 12px',
+                      borderBottom: '1px solid var(--line)',
+                      fontSize: 12,
+                    }}
+                  >
+                    <LangChip code={r.target} />
+                    <code style={{ fontFamily: 'var(--mono)', flex: 1, minWidth: 0 }}>
+                      {r.docId}
+                    </code>
+                    {r.status === 'translated' && (
+                      <span style={{ color: 'var(--ok, #2a8)' }}>
+                        {r.fieldsSet} field{r.fieldsSet === 1 ? '' : 's'}
+                      </span>
+                    )}
+                    {r.status === 'nothing' && (
+                      <span style={{ color: 'var(--ink-4)' }}>nothing missing</span>
+                    )}
+                    {r.status === 'error' && (
+                      <span style={{ color: 'var(--err, #c33)' }}>error: {r.error}</span>
+                    )}
+                  </div>
+                ))}
               </div>
             </>
+          )}
+
+          {run.status === 'error' && (
+            <div style={{ padding: '20px 0', fontSize: 13, color: 'var(--err, #c33)' }}>
+              {run.message}
+            </div>
           )}
         </div>
 
         <div className="ft">
-          <div style={{ display: 'flex', gap: 4 }}>
-            {[1, 2, 3].map((n) => (
-              <span
-                key={n}
-                style={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: '50%',
-                  background: n <= step ? 'var(--ink)' : 'var(--bg-3)',
-                }}
-              />
-            ))}
-          </div>
-          <span style={{ flex: 1 }} />
-          {step > 1 && (
-            <button className="btn" onClick={() => setStep((step - 1) as 1 | 2 | 3)}>
-              Back
-            </button>
+          {run.status === 'idle' && (
+            <>
+              <div style={{ display: 'flex', gap: 4 }}>
+                {[1, 2].map((n) => (
+                  <span
+                    key={n}
+                    style={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: '50%',
+                      background: n <= step ? 'var(--ink)' : 'var(--bg-3)',
+                    }}
+                  />
+                ))}
+              </div>
+              <span style={{ flex: 1 }} />
+              {step === 2 && (
+                <button className="btn" onClick={() => setStep(1)}>
+                  Back
+                </button>
+              )}
+              {step === 1 && (
+                <button
+                  className="btn primary"
+                  onClick={() => setStep(2)}
+                  disabled={sel.size === 0}
+                >
+                  Continue
+                </button>
+              )}
+              {step === 2 && (
+                <button
+                  className="btn accent"
+                  onClick={submit}
+                  disabled={targets.size === 0}
+                >
+                  <IcPlay size={12} /> Translate {totalJobs} job
+                  {totalJobs === 1 ? '' : 's'}
+                </button>
+              )}
+            </>
           )}
-          {step < 3 && (
-            <button
-              className="btn primary"
-              onClick={() => setStep((step + 1) as 1 | 2 | 3)}
-              disabled={step === 1 && sel.size === 0}
-            >
-              Continue
-            </button>
+          {run.status === 'running' && (
+            <>
+              <span style={{ flex: 1 }} />
+              <button className="btn" disabled>
+                Translating…
+              </button>
+            </>
           )}
-          {step === 3 && (
-            <button className="btn accent" onClick={onSubmit}>
-              <IcPlay size={12} /> Start {sel.size * targets.size} jobs
-            </button>
+          {run.status === 'done' && (
+            <>
+              <span style={{ flex: 1 }} />
+              <button
+                className="btn primary"
+                onClick={() => onDone(run.response)}
+              >
+                Done
+              </button>
+            </>
+          )}
+          {run.status === 'error' && (
+            <>
+              <span style={{ flex: 1 }} />
+              <button className="btn" onClick={() => setRun({ status: 'idle' })}>
+                Back
+              </button>
+            </>
           )}
         </div>
       </div>

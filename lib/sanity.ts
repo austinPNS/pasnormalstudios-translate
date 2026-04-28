@@ -22,9 +22,16 @@ const assertConfig = () => {
   }
 };
 
+export type SanityPerspective = 'raw' | 'previewDrafts' | 'published';
+
+// Param values are JSON-encoded into the GROQ query string. Arrays/objects work
+// (e.g. `*[_id in $ids]` with `{ ids: string[] }`).
+export type SanityQueryParam = string | number | boolean | readonly (string | number | boolean)[];
+
 export async function sanityQuery<T>(
   query: string,
-  params: Record<string, string | number | boolean> = {}
+  params: Record<string, SanityQueryParam> = {},
+  options: { perspective?: SanityPerspective } = {}
 ): Promise<T> {
   assertConfig();
 
@@ -32,7 +39,7 @@ export async function sanityQuery<T>(
     `https://${PROJECT_ID}.api.sanity.io/v${API_VERSION}/data/query/${DATASET}`
   );
   url.searchParams.set('query', query);
-  url.searchParams.set('perspective', 'previewDrafts');
+  url.searchParams.set('perspective', options.perspective ?? 'previewDrafts');
   for (const [k, v] of Object.entries(params)) {
     url.searchParams.set(`$${k}`, JSON.stringify(v));
   }

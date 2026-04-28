@@ -38,11 +38,16 @@ const LANG_LABEL: Record<Exclude<LangCode, 'en'>, string> = {
 };
 
 // Stable, large system prompt. Identical across all requests to the same target
-// language → eligible for prompt caching (5-min TTL). Prefix-match invariant: do
-// not interpolate timestamps / per-request IDs into this string.
-const buildSystemPrompt = (target: Exclude<LangCode, 'en'>): string => {
+// language (when no rulesOverride is passed) → eligible for prompt caching
+// (5-min TTL). Prefix-match invariant: do not interpolate timestamps /
+// per-request IDs into this string. When `rulesOverride` is supplied (e.g. by
+// the prompt-preview endpoint) the cache key changes, which is expected.
+const buildSystemPrompt = (
+  target: Exclude<LangCode, 'en'>,
+  rulesOverride?: string[]
+): string => {
   const protectedTerms = PROTECTED_GLOSSARY.map((g) => g.src).join(', ');
-  const specialRules = PROMPTS[target]?.specialRules ?? [];
+  const specialRules = rulesOverride ?? PROMPTS[target]?.specialRules ?? [];
   const rulesBlock = specialRules.length
     ? specialRules.map((r, i) => `${i + 1}. ${r}`).join('\n')
     : '(none)';
@@ -63,6 +68,8 @@ const buildSystemPrompt = (target: Exclude<LangCode, 'en'>): string => {
 4. General brand voice: premium, calm, confident, informal "you" form
 
 ## Protected terms (do NOT translate, copy verbatim)
+Match is **case-insensitive** and **also applies to English plural forms** of any term below. Keep the English form including its English plural — e.g. "Jerseys" stays "Jerseys" (not "Trikots"), "Bibs" stays "Bibs", "Speedsuits" stays "Speedsuits". Do NOT apply target-language pluralization or declension to protected terms; treat them as foreign-language proper nouns and leave them in English exactly as the source uses them. The same rule applies to multi-word protected terms (e.g. "Mechanism Jerseys" stays "Mechanism Jerseys").
+
 ${protectedTerms}
 
 ## Special rules for ${LANG_LABEL[target]} (PRIORITY 2)
@@ -82,6 +89,7 @@ export interface TranslationItem {
 
 export interface TranslationResult {
   translations: Record<string, string>;
+  notes?: Record<string, string[]>;
   usage: {
     inputTokens: number;
     outputTokens: number;
@@ -90,11 +98,17 @@ export interface TranslationResult {
   };
 }
 
+export interface TranslateOptions {
+  withNotes?: boolean;
+  specialRulesOverride?: string[];
+}
+
 export class TranslatorError extends Error {}
 
 export const translate = async (
   items: TranslationItem[],
-  target: Exclude<LangCode, 'en'>
+  target: Exclude<LangCode, 'en'>,
+  opts: TranslateOptions = {}
 ): Promise<TranslationResult> => {
   if (!apiKey) {
     throw new TranslatorError(
@@ -108,10 +122,30 @@ export const translate = async (
     };
   }
 
-  const system = buildSystemPrompt(target);
+  const system = buildSystemPrompt(target, opts.specialRulesOverride);
   const userPayload = {
     items: items.map((i) => ({ key: i.key, kind: i.kind, source: i.source })),
   };
+
+  // Notes are scoped to free-text usage (one item, user reads the reasoning).
+  // Disabled by default for doc/bulk paths to avoid 5-10× output token cost.
+  const withNotes = opts.withNotes === true;
+  const notesInstruction = withNotes
+    ? `\n\nFor each item, also include a "notes" array of 1-3 short sentences describing key translation decisions: term choices, reframings, idiom adaptations, CTA pattern matches, or anything non-obvious. Use the format "\\"X\\" → \\"Y\\" (reasoning)" when explaining a specific phrase. Skip notes for trivial 1-1 translations (return [] in that case).`
+    : '';
+
+  const itemSchemaProperties: Record<string, unknown> = {
+    key: { type: 'string' },
+    translation: { type: 'string' },
+  };
+  const itemSchemaRequired = ['key', 'translation'];
+  if (withNotes) {
+    itemSchemaProperties.notes = {
+      type: 'array',
+      items: { type: 'string' },
+    };
+    itemSchemaRequired.push('notes');
+  }
 
   const response = await client.messages.create({
     model: MODEL,
@@ -126,7 +160,7 @@ export const translate = async (
     messages: [
       {
         role: 'user',
-        content: `Translate the following items into ${LANG_LABEL[target]}. Return strict JSON matching the schema.\n\n${JSON.stringify(userPayload)}`,
+        content: `Translate the following items into ${LANG_LABEL[target]}. Return strict JSON matching the schema.${notesInstruction}\n\n${JSON.stringify(userPayload)}`,
       },
     ],
     output_config: {
@@ -141,11 +175,8 @@ export const translate = async (
               items: {
                 type: 'object',
                 additionalProperties: false,
-                properties: {
-                  key: { type: 'string' },
-                  translation: { type: 'string' },
-                },
-                required: ['key', 'translation'],
+                properties: itemSchemaProperties,
+                required: itemSchemaRequired,
               },
             },
           },
@@ -162,7 +193,9 @@ export const translate = async (
     throw new TranslatorError('Claude returned no text block');
   }
 
-  let parsed: { translations: Array<{ key: string; translation: string }> };
+  let parsed: {
+    translations: Array<{ key: string; translation: string; notes?: string[] }>;
+  };
   try {
     parsed = JSON.parse(textBlock.text);
   } catch (err) {
@@ -172,12 +205,15 @@ export const translate = async (
   }
 
   const map: Record<string, string> = {};
+  const notes: Record<string, string[]> = {};
   for (const t of parsed.translations) {
     map[t.key] = t.translation;
+    if (Array.isArray(t.notes)) notes[t.key] = t.notes;
   }
 
   return {
     translations: map,
+    ...(withNotes ? { notes } : {}),
     usage: {
       inputTokens: response.usage.input_tokens,
       outputTokens: response.usage.output_tokens,

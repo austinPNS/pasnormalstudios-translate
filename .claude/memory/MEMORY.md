@@ -3,8 +3,8 @@
 Project-specific knowledge for the `pns-translate` translation management UI. Translation rules originate from the main `pas-normal-studios-web` project and are mirrored here so this tool produces consistent output.
 
 ## Pending Tasks
-- [TODO — outstanding Sanity work](todo.md) — Phase 3B (nested arrays on uberProduct + pnsCollection), Phase 4 (writes, stale detection, jobs, portable text editing)
-- [Sanity integration plan](sanity-integration-plan.md) — reference plan. Phases 1, 2, 3A shipped
+- [TODO — outstanding Sanity work](todo.md) — Phase 4 (writes, stale detection, jobs, portable text editing)
+- [Sanity integration plan](sanity-integration-plan.md) — reference plan. Phases 1, 2, 3A, 3B shipped
 
 ## Shortcuts
 - **"translate"** → [Translation process](translation-process.md): audit → confirm scope → translate → batch patch → review → publish
@@ -14,6 +14,7 @@ Project-specific knowledge for the `pns-translate` translation management UI. Tr
 - [German (DE) style guide](translation-style-de.md) — gender prefixes (Männer/Frauen for products, Herren/Damen for categories), tone, 30+ locked terms, spec patterns, portable text rules
 
 ## Translation Rules
+- [Prompt cache warming for bulk Claude calls](feedback-prompt-cache-warming.md) — run first call alone, then parallel; concurrent first-fires all miss the cache
 - [Consolidated translation feedback](feedback-translation-rules.md) — 7 rules:
   1. Source priority: glossary > style guide
   2. Portable text: preserve block structure exactly, never markdown

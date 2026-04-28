@@ -127,6 +127,12 @@ export const IcCheck = (p: P) => (
     <path d="M3 8.5 6.5 12 13 4.5" />
   </Ic>
 );
+export const IcCopy = (p: P) => (
+  <Ic {...p}>
+    <rect x="5.5" y="5.5" width="8" height="8" rx="1" />
+    <path d="M3.5 10.5h-.5a.5.5 0 0 1-.5-.5V3a.5.5 0 0 1 .5-.5H10a.5.5 0 0 1 .5.5v.5" />
+  </Ic>
+);
 export const IcMore = (p: P) => (
   <Ic {...p}>
     <circle cx="3.5" cy="8" r=".75" fill="currentColor" />

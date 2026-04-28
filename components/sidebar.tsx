@@ -4,7 +4,6 @@ import type { ComponentType } from "react";
 import {
   IcDocs,
   IcGlossary,
-  IcJobs,
   IcPrompt,
   IcSearch,
   IcSettings,
@@ -17,14 +16,13 @@ type Route =
   | "viewer"
   | "free-text"
   | "prompts"
-  | "jobs"
   | "glossary"
   | "settings";
 
 interface SidebarProps {
   route: Route;
   setRoute: (r: Route) => void;
-  counts: { docs: number; jobs: number; glossary: number };
+  counts: { docs: number; glossary: number };
 }
 
 export const Sidebar = ({ route, setRoute, counts }: SidebarProps) => {
@@ -55,7 +53,6 @@ export const Sidebar = ({ route, setRoute, counts }: SidebarProps) => {
         <div className="hd">Workspace</div>
         {nav("documents", "Documents", IcDocs, counts.docs)}
         {nav("free-text", "Free Text", IcTranslate)}
-        {nav("jobs", "Jobs", IcJobs, counts.jobs)}
       </div>
       <div className="group">
         <div className="hd">Configure</div>
@@ -95,7 +92,6 @@ export const TopNav = ({
       <div className="tabs">
         {tab("documents", "Documents")}
         {tab("free-text", "Free Text")}
-        {tab("jobs", "Jobs")}
         {tab("prompts", "Prompts")}
         {tab("glossary", "Glossary")}
         {tab("settings", "Settings")}

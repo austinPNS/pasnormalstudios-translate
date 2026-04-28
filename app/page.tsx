@@ -7,18 +7,17 @@ import { Kbd } from '@/components/primitives';
 import { DocumentsScreen, type DocsFilter } from '@/components/screens/documents';
 import { FreeTextScreen } from '@/components/screens/free-text';
 import { GlossaryScreen } from '@/components/screens/glossary';
-import { JobsScreen } from '@/components/screens/jobs';
 import { PromptsScreen } from '@/components/screens/prompts';
 import { SettingsScreen } from '@/components/screens/settings';
 import { ViewerScreen } from '@/components/screens/viewer';
 import { Sidebar, TopNav, type Route } from '@/components/sidebar';
 import { TweaksPanel } from '@/components/tweaks-panel';
 import { fetchDocuments } from '@/lib/client-storage';
-import { GLOSSARY, JOBS, TWEAK_DEFAULTS } from '@/lib/data';
+import { GLOSSARY, TWEAK_DEFAULTS } from '@/lib/data';
 import type { DocRecord, LangCode, Tweaks } from '@/lib/types';
 
 const isRoute = (v: string): v is Route =>
-  ['documents', 'viewer', 'free-text', 'prompts', 'jobs', 'glossary', 'settings'].includes(v);
+  ['documents', 'viewer', 'free-text', 'prompts', 'glossary', 'settings'].includes(v);
 
 export default function App() {
   const [route, setRoute] = useState<Route>('documents');
@@ -106,7 +105,6 @@ export default function App() {
 
   const counts = {
     docs: docs.length,
-    jobs: JOBS.filter((j) => j.status === 'progress' || j.status === 'review').length,
     glossary: GLOSSARY.length,
   };
 
@@ -157,7 +155,6 @@ export default function App() {
       );
     if (route === 'free-text') return <FreeTextScreen />;
     if (route === 'prompts') return <PromptsScreen docs={docs} />;
-    if (route === 'jobs') return <JobsScreen />;
     if (route === 'glossary') return <GlossaryScreen />;
     if (route === 'settings') return <SettingsScreen />;
     return null;
@@ -168,7 +165,6 @@ export default function App() {
     viewer: { label: docId ? `Documents / ${docId}` : 'Documents' },
     'free-text': { label: 'Free Text' },
     prompts: { label: 'Prompts' },
-    jobs: { label: 'Jobs' },
     glossary: { label: 'Glossary' },
     settings: { label: 'Settings' },
   };
@@ -237,9 +233,14 @@ export default function App() {
           initialSel={bulkInitial}
           docs={docs}
           onClose={() => setBulkOpen(false)}
-          onSubmit={() => {
+          onDone={() => {
             setBulkOpen(false);
-            setRoute('jobs');
+            // Refresh docs so the new translations show as filled.
+            fetchDocuments()
+              .then((d) => setDocs(d))
+              .catch((e: unknown) =>
+                setDocsError(e instanceof Error ? e.message : 'Unknown error')
+              );
           }}
         />
       )}

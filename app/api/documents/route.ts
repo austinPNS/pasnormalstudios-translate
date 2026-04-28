@@ -61,7 +61,8 @@ const formatRelative = (iso: string): string => {
 
 const toDocRecord = (
   row: Record<string, unknown>,
-  config: SanityTypeConfig
+  config: SanityTypeConfig,
+  sanityType: string
 ): DocRecord | null => {
   const id = typeof row._id === 'string' ? row._id : null;
   const updated = typeof row._updatedAt === 'string' ? row._updatedAt : '';
@@ -75,6 +76,7 @@ const toDocRecord = (
       id,
       title: id,
       type: config.uiType,
+      sanityType,
       updated: formatRelative(updated),
       author: '—',
       langs: {
@@ -101,28 +103,39 @@ const toDocRecord = (
     id,
     title,
     type: config.uiType,
+    sanityType,
     updated: formatRelative(updated),
     author: '—',
     langs,
   };
 };
 
-const buildQuery = (sanityType: string, config: SanityTypeConfig): string => {
-  const extra = typeof config.filter === 'function' ? config.filter() : config.filter;
-  const filters = [
-    `_type == "${sanityType}"`,
-    '!(_id in path("drafts.**"))',
-    extra,
-  ].filter((s) => s.length > 0);
-  const projection = buildListProjection(config.fields);
-  return `*[${filters.join(' && ')}] | order(_updatedAt desc) ${projection}`;
-};
-
 const fetchType = async (sanityType: string, config: SanityTypeConfig): Promise<DocRecord[]> => {
-  const query = buildQuery(sanityType, config);
-  const rows = await sanityQuery<Record<string, unknown>[]>(query);
-  return rows
-    .map((r) => toDocRecord(r, config))
+  const extra = typeof config.filter === 'function' ? config.filter() : config.filter;
+  const baseFilters = [`_type == "${sanityType}"`, extra].filter((s) => s.length > 0);
+  const projection = buildListProjection(config.fields);
+
+  // Filter applies to the "live" version of each doc:
+  //  - if a draft exists, the draft is live → only the drafts query can surface it
+  //  - if no draft exists, the published is live → publishedQuery surfaces it
+  // The `!defined(*[_id == "drafts." + ^._id][0])` clause excludes published rows
+  // whose draft is the live version (so the published is never shown alongside).
+  const publishedFilters = [
+    ...baseFilters,
+    '!(_id in path("drafts.**"))',
+    '!defined(*[_id == "drafts." + ^._id][0])',
+  ];
+  const draftFilters = [...baseFilters, '_id in path("drafts.**")'];
+  const publishedQuery = `*[${publishedFilters.join(' && ')}] | order(_updatedAt desc) ${projection}`;
+  const draftsQuery = `*[${draftFilters.join(' && ')}] | order(_updatedAt desc) ${projection}`;
+
+  const [published, drafts] = await Promise.all([
+    sanityQuery<Record<string, unknown>[]>(publishedQuery, {}, { perspective: 'raw' }),
+    sanityQuery<Record<string, unknown>[]>(draftsQuery, {}, { perspective: 'raw' }),
+  ]);
+
+  return [...drafts, ...published]
+    .map((r) => toDocRecord(r, config, sanityType))
     .filter((d): d is DocRecord => d !== null);
 };
 
