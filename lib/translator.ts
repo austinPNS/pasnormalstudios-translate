@@ -42,15 +42,30 @@ const LANG_LABEL: Record<Exclude<LangCode, 'en'>, string> = {
 // (5-min TTL). Prefix-match invariant: do not interpolate timestamps /
 // per-request IDs into this string. When `rulesOverride` is supplied (e.g. by
 // the prompt-preview endpoint) the cache key changes, which is expected.
+const renderRulesBlock = (rules: string[]): string =>
+  rules.length ? rules.map((r, i) => `${i + 1}. ${r}`).join('\n') : '(none)';
+
 const buildSystemPrompt = (
   target: Exclude<LangCode, 'en'>,
   rulesOverride?: string[]
 ): string => {
   const protectedTerms = PROTECTED_GLOSSARY.map((g) => g.src).join(', ');
-  const specialRules = rulesOverride ?? PROMPTS[target]?.specialRules ?? [];
-  const rulesBlock = specialRules.length
-    ? specialRules.map((r, i) => `${i + 1}. ${r}`).join('\n')
-    : '(none)';
+
+  // When rulesOverride is supplied (e.g. by /api/prompt-preview), treat it as
+  // the full rule set — caller is responsible for already merging general+lang
+  // if they want to. Default path auto-merges: general first, then language.
+  const generalRules = rulesOverride ? [] : PROMPTS.general?.specialRules ?? [];
+  const langRules = rulesOverride ?? PROMPTS[target]?.specialRules ?? [];
+
+  const generalBlock = rulesOverride
+    ? ''
+    : `## General rules — apply to every target language (PRIORITY 2a)
+${renderRulesBlock(generalRules)}
+
+`;
+  const langBlockHeader = rulesOverride
+    ? `## Special rules (PRIORITY 2)`
+    : `## Special rules for ${LANG_LABEL[target]} (PRIORITY 2b)`;
 
   // The DE style guide only applies to DE. Other languages use the protected-term
   // list + special rules + a brief generic instruction.
@@ -63,7 +78,7 @@ const buildSystemPrompt = (
 
 ## Priority order
 1. Protected terms — never translate these (highest priority)
-2. Special rules below
+2. Special rules below (general rules first, then language-specific rules that extend or override)
 3. Style guide${target === 'de' ? '' : ' (none provided for this language)'}
 4. General brand voice: premium, calm, confident, informal "you" form
 
@@ -72,8 +87,8 @@ Match is **case-insensitive** and **also applies to English plural forms** of an
 
 ${protectedTerms}
 
-## Special rules for ${LANG_LABEL[target]} (PRIORITY 2)
-${rulesBlock}
+${generalBlock}${langBlockHeader}
+${renderRulesBlock(langRules)}
 ${styleGuideBlock}
 ## Output format
 You will receive an array of items, each with a unique \`key\` and \`source\` text. Return an object with a \`translations\` array, one entry per input item, in the same order. Each entry has the same \`key\` and a \`translation\` field with the translated text. Do not skip items. Do not add commentary outside the JSON.

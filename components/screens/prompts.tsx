@@ -13,14 +13,17 @@ import { IcCheck, IcPlay, IcPlus, IcX } from "../icons";
 import { LangChip } from "../primitives";
 
 type TargetLang = Exclude<LangCode, "en">;
+type ActiveKey = "general" | TargetLang;
 type SaveState = "idle" | "saving" | "saved" | "error";
+
+const isTargetLang = (k: ActiveKey): k is TargetLang => k !== "general";
 
 interface Props {
   docs: DocRecord[];
 }
 
 export const PromptsScreen = ({ docs }: Props) => {
-  const [active, setActive] = useState<TargetLang>("de");
+  const [active, setActive] = useState<ActiveKey>("de");
   const [prompt, setPrompt] = useState<PromptsMap>(() => ({ ...PROMPTS }));
   const [saved, setSaved] = useState<PromptsMap>(() => ({ ...PROMPTS }));
   const [saveState, setSaveState] = useState<SaveState>("idle");
@@ -32,8 +35,10 @@ export const PromptsScreen = ({ docs }: Props) => {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
 
-  const p = prompt[active]!;
-  const lang = LANGS.find((l) => l.code === active)!;
+  const p: PromptEntry = prompt[active] ?? { specialRules: [] };
+  const lang = isTargetLang(active)
+    ? LANGS.find((l) => l.code === active)!
+    : null;
 
   // Hydrate from data/prompts.json on mount.
   useEffect(() => {
@@ -55,7 +60,7 @@ export const PromptsScreen = ({ docs }: Props) => {
   const update = <K extends keyof PromptEntry>(k: K, v: PromptEntry[K]) =>
     setPrompt((s) => ({
       ...s,
-      [active]: { ...(s[active] as PromptEntry), [k]: v },
+      [active]: { ...((s[active] ?? { specialRules: [] }) as PromptEntry), [k]: v },
     }));
 
   // specialRules is stored on disk as string[] (one rule per item, preserving
@@ -91,17 +96,19 @@ export const PromptsScreen = ({ docs }: Props) => {
   }, [active]);
 
   const onRunPreview = async () => {
+    if (!isTargetLang(active)) return;
     const trimmed = previewText.trim();
     if (!trimmed) return;
     setPreviewLoading(true);
     setPreviewError(null);
     setPreviewResult(null);
     try {
-      const result = await previewPromptTranslate(
-        trimmed,
-        active,
-        p.specialRules,
-      );
+      // Merge general + active language rules so preview matches what the
+      // translator will actually send at runtime.
+      const generalRules = prompt.general?.specialRules ?? [];
+      const langRules = prompt[active]?.specialRules ?? [];
+      const merged = [...generalRules, ...langRules];
+      const result = await previewPromptTranslate(trimmed, active, merged);
       setPreviewResult(result);
     } catch (e) {
       setPreviewError(e instanceof Error ? e.message : "Preview failed");
@@ -114,6 +121,17 @@ export const PromptsScreen = ({ docs }: Props) => {
     <div className="prompts-split">
       <aside className="prompts-list">
         <div className="hd">Languages</div>
+        <div
+          key="general"
+          className={`lang-row ${active === "general" ? "active" : ""}`}
+          onClick={() => setActive("general")}
+        >
+          <div className="flag">GEN</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="nm">General</div>
+            <div className="sub">applies to all</div>
+          </div>
+        </div>
         {LANGS.filter(
           (l): l is (typeof LANGS)[number] & { code: TargetLang } => !l.source,
         ).map((l) => {
@@ -137,7 +155,7 @@ export const PromptsScreen = ({ docs }: Props) => {
         <div className="prompt-editor-head">
           <div>
             <h2>
-              {lang.label}{" "}
+              {lang ? lang.label : "General"}{" "}
               <span
                 style={{
                   color: "var(--ink-4)",
@@ -147,13 +165,13 @@ export const PromptsScreen = ({ docs }: Props) => {
                   marginLeft: 4,
                 }}
               >
-                {lang.region}
+                {lang ? lang.region : "applies to every language"}
               </span>
             </h2>
             <div className="sub">
-              Prompt used for every EN → {lang.code.toUpperCase()} translation.
-              Supports {"{{field_name}}"}, {"{{doc_type}}"}, {"{{source_text}}"}
-              .
+              {lang
+                ? `Prompt used for every EN → ${lang.code.toUpperCase()} translation. Combined with General rules at runtime.`
+                : "Shared rules prepended to every EN → DE/FR/IT translation. Per-language rules below extend or override these."}
             </div>
           </div>
           <div style={{ flex: 1 }} />
@@ -226,7 +244,9 @@ export const PromptsScreen = ({ docs }: Props) => {
               }}
               placeholder={
                 p.specialRules.length === 0
-                  ? `No rules yet for ${lang.label}. Add one rule per line — e.g.\nTARGET LANGUAGE: ${lang.label}.\n- Keep brand and collection names in English.`
+                  ? lang
+                    ? `No rules yet for ${lang.label}. Add one rule per line — e.g.\nTARGET LANGUAGE: ${lang.label}.\n- Keep brand and collection names in English.`
+                    : `No general rules yet. Add one rule per line — e.g.\nCYCLING APPAREL CONTEXT: …\n- Never translate brand or collection names.`
                   : undefined
               }
             />
@@ -254,147 +274,174 @@ export const PromptsScreen = ({ docs }: Props) => {
             </div>
           </div>
 
-          <aside className="prompt-aside">
-            <div className="section-label">Preview</div>
-            <div
-              style={{ fontSize: 12, color: "var(--ink-3)", marginBottom: 10 }}
-            >
-              Paste any English text to test the rules currently in the editor.
-              Uses your unsaved edits - does not write to Sanity.
-            </div>
+          {isTargetLang(active) ? (
+            <aside className="prompt-aside">
+              <div className="section-label">Preview</div>
+              <div
+                style={{ fontSize: 12, color: "var(--ink-3)", marginBottom: 10 }}
+              >
+                Paste any English text to test the rules currently in the editor.
+                Uses your unsaved edits (General + {active.toUpperCase()})
+                merged - does not write to Sanity.
+              </div>
 
-            <div className="preview-card">
-              <div className="hd">
-                <LangChip code="en" source />
-                <span className="ttl">Source</span>
-                <span
+              <div className="preview-card">
+                <div className="hd">
+                  <LangChip code="en" source />
+                  <span className="ttl">Source</span>
+                  <span
+                    style={{
+                      marginLeft: "auto",
+                      fontFamily: "var(--mono)",
+                      fontSize: 10.5,
+                      color: "var(--ink-4)",
+                    }}
+                  >
+                    {previewText.trim()
+                      ? `${previewText.trim().split(/\s+/).length} words`
+                      : "paste below"}
+                  </span>
+                </div>
+                <textarea
+                  value={previewText}
+                  onChange={(e) => setPreviewText(e.target.value)}
+                  placeholder="Paste English text here to test the prompt..."
+                  rows={5}
+                  spellCheck={false}
                   style={{
-                    marginLeft: "auto",
+                    width: "100%",
+                    border: "none",
+                    outline: "none",
+                    padding: "8px 10px",
+                    fontFamily: "inherit",
+                    fontSize: 12.5,
+                    lineHeight: 1.55,
+                    resize: "vertical",
+                    background: "transparent",
+                    color: "var(--ink)",
+                  }}
+                />
+                {(previewResult || previewError || previewLoading) && (
+                  <div
+                    className="row"
+                    style={{ borderTop: "1px solid var(--line)" }}
+                  >
+                    <div className="lbl">
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 6,
+                        }}
+                      >
+                        <LangChip code={active} /> Output
+                      </span>
+                    </div>
+                    <div
+                      className="val"
+                      style={{ color: previewError ? "var(--err)" : undefined }}
+                    >
+                      {previewLoading
+                        ? "Translating…"
+                        : previewError
+                          ? previewError
+                          : previewResult?.translation}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <button
+                className="btn primary"
+                style={{ width: "100%", justifyContent: "center", marginTop: 10 }}
+                onClick={onRunPreview}
+                disabled={previewLoading || !previewText.trim()}
+              >
+                <IcPlay size={12} />{" "}
+                {previewLoading ? "Running…" : "Run preview"}
+              </button>
+
+              {previewResult && previewResult.notes.length > 0 && (
+                <>
+                  <div
+                    className="section-label"
+                    style={{ marginTop: 14, marginBottom: 6 }}
+                  >
+                    Translation notes
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 6,
+                      fontSize: 12,
+                      color: "var(--ink-2)",
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    {previewResult.notes.map((note, i) => (
+                      <div key={i}>— {note}</div>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {previewResult && (
+                <div
+                  style={{
+                    marginTop: 10,
+                    fontSize: 11,
                     fontFamily: "var(--mono)",
-                    fontSize: 10.5,
                     color: "var(--ink-4)",
                   }}
                 >
-                  {previewText.trim()
-                    ? `${previewText.trim().split(/\s+/).length} words`
-                    : "paste below"}
-                </span>
-              </div>
-              <textarea
-                value={previewText}
-                onChange={(e) => setPreviewText(e.target.value)}
-                placeholder="Paste English text here to test the prompt..."
-                rows={5}
-                spellCheck={false}
-                style={{
-                  width: "100%",
-                  border: "none",
-                  outline: "none",
-                  padding: "8px 10px",
-                  fontFamily: "inherit",
-                  fontSize: 12.5,
-                  lineHeight: 1.55,
-                  resize: "vertical",
-                  background: "transparent",
-                  color: "var(--ink)",
-                }}
-              />
-              {(previewResult || previewError || previewLoading) && (
-                <div
-                  className="row"
-                  style={{ borderTop: "1px solid var(--line)" }}
-                >
-                  <div className="lbl">
-                    <span
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 6,
-                      }}
-                    >
-                      <LangChip code={active} /> Output
-                    </span>
-                  </div>
-                  <div
-                    className="val"
-                    style={{ color: previewError ? "var(--err)" : undefined }}
-                  >
-                    {previewLoading
-                      ? "Translating…"
-                      : previewError
-                        ? previewError
-                        : previewResult?.translation}
-                  </div>
+                  model: claude-opus-4-7 · {previewResult.usage.inputTokens} in
+                  · {previewResult.usage.outputTokens} out
+                  {previewResult.usage.cacheReadTokens > 0 &&
+                    ` · ${previewResult.usage.cacheReadTokens} cached`}
                 </div>
               )}
-            </div>
 
-            <button
-              className="btn primary"
-              style={{ width: "100%", justifyContent: "center", marginTop: 10 }}
-              onClick={onRunPreview}
-              disabled={previewLoading || !previewText.trim()}
-            >
-              <IcPlay size={12} /> {previewLoading ? "Running…" : "Run preview"}
-            </button>
+              <hr className="sep" />
 
-            {previewResult && previewResult.notes.length > 0 && (
-              <>
-                <div
-                  className="section-label"
-                  style={{ marginTop: 14, marginBottom: 6 }}
-                >
-                  Translation notes
-                </div>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 6,
-                    fontSize: 12,
-                    color: "var(--ink-2)",
-                    lineHeight: 1.5,
-                  }}
-                >
-                  {previewResult.notes.map((note, i) => (
-                    <div key={i}>— {note}</div>
-                  ))}
-                </div>
-              </>
-            )}
-
-            {previewResult && (
+              <div className="section-label">Applies to</div>
               <div
-                style={{
-                  marginTop: 10,
-                  fontSize: 11,
-                  fontFamily: "var(--mono)",
-                  color: "var(--ink-4)",
-                }}
+                style={{ fontSize: 12, color: "var(--ink-3)", lineHeight: 1.6 }}
               >
-                model: claude-opus-4-7 · {previewResult.usage.inputTokens} in ·{" "}
-                {previewResult.usage.outputTokens} out
-                {previewResult.usage.cacheReadTokens > 0 &&
-                  ` · ${previewResult.usage.cacheReadTokens} cached`}
+                <div>
+                  —{" "}
+                  {
+                    docs.filter((d) => d.langs[active].status !== "approved")
+                      .length
+                  }{" "}
+                  documents currently out-of-date
+                </div>
               </div>
-            )}
-
-            <hr className="sep" />
-
-            <div className="section-label">Applies to</div>
-            <div
-              style={{ fontSize: 12, color: "var(--ink-3)", lineHeight: 1.6 }}
-            >
-              <div>
-                —{" "}
-                {
-                  docs.filter((d) => d.langs[active].status !== "approved")
-                    .length
-                }{" "}
-                documents currently out-of-date
+            </aside>
+          ) : (
+            <aside className="prompt-aside">
+              <div className="section-label">General rules</div>
+              <div
+                style={{ fontSize: 12, color: "var(--ink-3)", lineHeight: 1.5 }}
+              >
+                These rules are prepended to every EN → DE / FR / IT
+                translation as the base layer. They render in the system prompt
+                under{" "}
+                <code>## General rules — apply to every target language</code>,
+                followed by the language-specific rules under{" "}
+                <code>## Special rules for [Language]</code>.
               </div>
-            </div>
-          </aside>
+              <hr className="sep" />
+              <div className="section-label">How to test</div>
+              <div
+                style={{ fontSize: 12, color: "var(--ink-3)", lineHeight: 1.5 }}
+              >
+                Switch to DE, FR, or IT and use the preview there — it sends
+                <em> General + that language</em> merged, exactly as the
+                translator will at runtime.
+              </div>
+            </aside>
+          )}
         </div>
       </div>
     </div>

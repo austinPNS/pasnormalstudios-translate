@@ -17,6 +17,7 @@ export const LANGS: Lang[] = [
 
 // SSR fallback. Real content lives in data/prompts.json and is fetched on mount.
 export const PROMPTS: PromptsMap = {
+  general: { specialRules: [] },
   de: { specialRules: [] },
   fr: { specialRules: [] },
   it: { specialRules: [] },

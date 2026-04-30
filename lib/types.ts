@@ -75,7 +75,8 @@ export interface PromptEntry {
   specialRules: string[];
 }
 
-export type PromptsMap = Partial<Record<Exclude<LangCode, 'en'>, PromptEntry>>;
+export type PromptKey = 'general' | Exclude<LangCode, 'en'>;
+export type PromptsMap = Partial<Record<PromptKey, PromptEntry>>;
 
 export interface JobRecord {
   id: string;

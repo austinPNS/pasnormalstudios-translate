@@ -5,7 +5,7 @@ import type { PromptEntry, PromptsMap } from '@/lib/types';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const TARGETS = ['de', 'fr', 'it'] as const;
+const KEYS = ['general', 'de', 'fr', 'it'] as const;
 
 const isPromptEntry = (v: unknown): v is PromptEntry => {
   if (!v || typeof v !== 'object') return false;
@@ -19,7 +19,7 @@ const isPromptEntry = (v: unknown): v is PromptEntry => {
 const isPromptsMap = (v: unknown): v is PromptsMap => {
   if (!v || typeof v !== 'object') return false;
   const r = v as Record<string, unknown>;
-  return TARGETS.every((t) => r[t] === undefined || isPromptEntry(r[t]));
+  return KEYS.every((k) => r[k] === undefined || isPromptEntry(r[k]));
 };
 
 export async function GET() {
