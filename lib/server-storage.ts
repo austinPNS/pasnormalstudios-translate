@@ -1,14 +1,16 @@
 import { promises as fs } from 'fs';
 import path from 'path';
+import {
+  CATEGORY_NOTE,
+  KEY_TO_CATEGORY,
+  groupRowsByCategory,
+  type ProtectedTerms,
+} from './protected-terms';
 import type { GlossaryRow, PromptsMap } from './types';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
-const GLOSSARY_FILE = path.join(DATA_DIR, 'glossary.json');
+const PROTECTED_FILE = path.join(DATA_DIR, 'protected-terms.json');
 const PROMPTS_FILE = path.join(DATA_DIR, 'prompts.json');
-
-interface GlossaryFile {
-  entries: GlossaryRow[];
-}
 
 const readJson = async <T>(file: string): Promise<T> => {
   const raw = await fs.readFile(file, 'utf8');
@@ -21,15 +23,37 @@ const writeJson = async (file: string, data: unknown): Promise<void> => {
   await fs.rename(tmp, file);
 };
 
+const PROTECTED_KEYS = Object.keys(KEY_TO_CATEGORY) as (keyof ProtectedTerms)[];
+
+const flattenProtected = (data: ProtectedTerms): GlossaryRow[] => {
+  const rows: GlossaryRow[] = [];
+  for (const key of PROTECTED_KEYS) {
+    const category = KEY_TO_CATEGORY[key];
+    for (const src of data[key] ?? []) {
+      rows.push({
+        src,
+        de: src,
+        fr: src,
+        it: src,
+        kind: 'dnt',
+        scope: category,
+        notes: CATEGORY_NOTE[category],
+      });
+    }
+  }
+  return rows;
+};
+
 export const readGlossaryEntries = async (): Promise<GlossaryRow[]> => {
-  const data = await readJson<GlossaryFile>(GLOSSARY_FILE);
-  return data.entries ?? [];
+  const data = await readJson<ProtectedTerms>(PROTECTED_FILE);
+  return flattenProtected(data);
 };
 
 export const writeGlossaryEntries = async (
   entries: GlossaryRow[]
 ): Promise<void> => {
-  await writeJson(GLOSSARY_FILE, { entries });
+  const grouped = groupRowsByCategory(entries);
+  await writeJson(PROTECTED_FILE, grouped);
 };
 
 export const readPrompts = async (): Promise<PromptsMap> => {

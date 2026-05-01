@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { BulkModal } from '@/components/bulk-modal';
 import { IcSearch } from '@/components/icons';
 import { Kbd } from '@/components/primitives';
@@ -18,6 +18,30 @@ import type { DocRecord, LangCode, Tweaks } from '@/lib/types';
 
 const isRoute = (v: string): v is Route =>
   ['documents', 'viewer', 'free-text', 'prompts', 'glossary', 'settings'].includes(v);
+
+interface RouteState {
+  route: Route;
+  docId: string | null;
+}
+
+const parseHash = (hash: string): RouteState => {
+  const raw = hash.replace(/^#\/?/, '');
+  if (!raw) return { route: 'documents', docId: null };
+  const [first, ...rest] = raw.split('/');
+  if (first === 'viewer' && rest[0]) {
+    return { route: 'viewer', docId: decodeURIComponent(rest[0]) };
+  }
+  if (isRoute(first) && first !== 'viewer') {
+    return { route: first, docId: null };
+  }
+  return { route: 'documents', docId: null };
+};
+
+const formatHash = (route: Route, docId: string | null): string => {
+  if (route === 'viewer' && docId) return `#viewer/${encodeURIComponent(docId)}`;
+  if (route === 'documents' || (route === 'viewer' && !docId)) return '';
+  return `#${route}`;
+};
 
 export default function App() {
   const [route, setRoute] = useState<Route>('documents');
@@ -53,21 +77,29 @@ export default function App() {
     };
   }, []);
 
-  // Restore persisted state from localStorage after mount (avoid SSR mismatch).
+  // Sync route ↔ URL hash. Source of truth is `window.location.hash` so reload,
+  // back/forward, and shareable links all behave correctly. State is updated on
+  // mount and on every hashchange (which fires for back/forward navigation).
+  useEffect(() => {
+    const sync = () => {
+      const next = parseHash(window.location.hash);
+      setRoute(next.route);
+      setDocId(next.docId);
+    };
+    sync();
+    window.addEventListener('hashchange', sync);
+    return () => window.removeEventListener('hashchange', sync);
+  }, []);
+
+  // Tweaks still persist to localStorage — separate concern from routing.
   useEffect(() => {
     try {
-      const r = localStorage.getItem('pns.route');
-      if (r && isRoute(r)) setRoute(r);
       const t = localStorage.getItem('pns.tweaks');
       if (t) setTweaks((s) => ({ ...s, ...JSON.parse(t) }));
     } catch {
       /* ignore */
     }
   }, []);
-
-  useEffect(() => {
-    localStorage.setItem('pns.route', route);
-  }, [route]);
 
   useEffect(() => {
     localStorage.setItem('pns.tweaks', JSON.stringify(tweaks));
@@ -85,21 +117,6 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const onPop = (e: PopStateEvent) => {
-      const s = e.state as { pnsViewerDoc?: string } | null;
-      if (s?.pnsViewerDoc) {
-        setDocId(s.pnsViewerDoc);
-        setRoute('viewer');
-      } else {
-        setDocId(null);
-        setRoute('documents');
-      }
-    };
-    window.addEventListener('popstate', onPop);
-    return () => window.removeEventListener('popstate', onPop);
-  }, []);
-
-  useEffect(() => {
     window.parent.postMessage({ type: '__edit_mode_set_keys', edits: tweaks }, '*');
   }, [tweaks]);
 
@@ -108,17 +125,24 @@ export default function App() {
     glossary: GLOSSARY.length,
   };
 
-  const openDoc = (id: string) => {
+  const navigate = useCallback((r: Route, id: string | null = null) => {
+    setRoute(r);
     setDocId(id);
-    setRoute('viewer');
-    window.history.pushState({ pnsViewerDoc: id }, '');
-  };
+    const next = formatHash(r, id);
+    const cur = window.location.hash;
+    if (next === cur) return;
+    const url = next || window.location.pathname + window.location.search;
+    window.history.pushState(null, '', url);
+  }, []);
+
+  const openDoc = (id: string) => navigate('viewer', id);
   const back = () => {
-    if (window.history.state?.pnsViewerDoc) {
+    // If there's a previous entry, let the browser go back so back/forward
+    // history stays intact. Otherwise fall back to the documents list.
+    if (window.history.length > 1) {
       window.history.back();
     } else {
-      setDocId(null);
-      setRoute('documents');
+      navigate('documents');
     }
   };
   const bulk = (ids: string[]) => {
@@ -177,20 +201,14 @@ export default function App() {
       {tweaks.nav === 'sidebar' && (
         <Sidebar
           route={route}
-          setRoute={(r) => {
-            setRoute(r);
-            if (r !== 'viewer') setDocId(null);
-          }}
+          setRoute={(r) => navigate(r)}
           counts={counts}
         />
       )}
       {tweaks.nav === 'topbar' && (
         <TopNav
           route={route === 'viewer' ? 'documents' : route}
-          setRoute={(r) => {
-            setRoute(r);
-            setDocId(null);
-          }}
+          setRoute={(r) => navigate(r)}
         />
       )}
       <div className="main">

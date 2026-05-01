@@ -1,5 +1,7 @@
 {
-  "companyNames": ["Pas Normal Studios"],
+  "companyNames": [
+    "Pas Normal Studios"
+  ],
   "collectionNames": [
     "Mechanism",
     "Essential",
@@ -17,6 +19,7 @@
     "Salomon"
   ],
   "wordsAndPhrases": [
+    "Mitts",
     "Road to Nowhere",
     "International Cycling Club",
     "Destination Everywhere",
@@ -283,7 +286,6 @@
     "Balance Short Tights",
     "Balance Shorts",
     "Balance Long Tights",
-    "Balance Long Sleeve T-shirt",
     "Balance Sleeveless Top",
     "Balance Bra",
     "Balance Cap",
