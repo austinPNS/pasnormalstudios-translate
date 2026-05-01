@@ -6,7 +6,7 @@ This file provides guidance to Claude Code when working with code in this reposi
 
 **pns-translate** is a standalone Next.js 14 translation management UI for Pas Normal Studios. It's a separate tool from the main `pas-normal-studios-web` headless e-commerce project but shares its translation rules, glossary, and DE style guide.
 
-The app provides screens for managing multilingual content workflows: document overview, per-document viewer/editor, prompts, jobs, glossary, and settings.
+The app provides screens for managing multilingual content workflows: document overview, per-document viewer/editor, free-text translation, prompts, glossary, and settings.
 
 **Languages supported:** EN (source), DE, FR, IT
 
@@ -15,9 +15,9 @@ The app provides screens for managing multilingual content workflows: document o
 - **Framework:** Next.js 14 App Router (`app/` directory)
 - **React:** 18.3
 - **TypeScript:** 5.5
-- **State:** localStorage (client) + JSON files (server, via `lib/server-storage.ts`)
+- **State:** URL hash (route) + localStorage (UI tweaks) + JSON files (glossary, prompts via `lib/server-storage.ts`) + Sanity (documents)
 - **Styling:** Single `app/globals.css` — no CSS framework
-- **No Sanity integration yet** — mock data lives in `lib/data.ts`
+- **Sanity:** wired via HTTP API in `lib/sanity.ts` (no SDK). `/api/documents` and `/api/documents/[id]` fetch live content; the translator writes back via mutations.
 
 ## Common Commands
 
@@ -34,33 +34,39 @@ npm run type-check   # TypeScript check (no emit)
 ### Directory Structure
 
 - **`app/`** — Next.js App Router
-  - `page.tsx` — Main shell with route state, renders the selected screen
+  - `page.tsx` — Main shell with hash-based routing, renders the selected screen
   - `layout.tsx` — Root layout
   - `globals.css` — All styling
-  - `api/glossary/route.ts` — GET/PUT glossary entries
+  - `api/documents/route.ts` + `api/documents/[id]/route.ts` — Sanity-backed document list/detail
+  - `api/translate/route.ts` + `api/bulk-translate/route.ts` — Anthropic-backed translation
+  - `api/free-text/route.ts` + `api/prompt-preview/route.ts` — ad-hoc translation endpoints
+  - `api/glossary/route.ts` — GET/PUT protected-terms (categorized → flattened to `GlossaryRow[]` for the client)
   - `api/prompts/route.ts` — GET/PUT per-language prompts
 - **`components/`**
-  - `screens/` — Route screens: `documents`, `viewer`, `prompts`, `jobs`, `glossary`, `settings`
+  - `screens/` — Route screens: `documents`, `viewer`, `free-text`, `prompts`, `glossary`, `settings`
   - `sidebar.tsx` / `tweaks-panel.tsx` / `bulk-modal.tsx` / `primitives.tsx` / `icons.tsx`
 - **`lib/`**
-  - `types.ts` — All shared types (`LangCode`, `DocRecord`, `SampleDoc`, `GlossaryRow`, `PromptEntry`, `JobRecord`, `Tweaks`)
-  - `data.ts` — Mock data (DOCS, JOBS, SAMPLE_DOC, LANGS, label maps, tweak defaults)
-  - `protected-terms.ts` — Exports `PROTECTED_GLOSSARY` from `data/protected-terms.json`
-  - `server-storage.ts` — File-system read/write of `data/glossary.json` + `data/prompts.json`
+  - `types.ts` — All shared types (`LangCode`, `DocRecord`, `SampleDoc`, `GlossaryRow`, `PromptEntry`, `Tweaks`)
+  - `data.ts` — `LANGS`, label maps, tweak defaults, SSR fallbacks for prompts/glossary
+  - `protected-terms.ts` — Reads `data/protected-terms.json`, flattens to `PROTECTED_GLOSSARY: GlossaryRow[]`, exports `groupRowsByCategory` for the API route
+  - `server-storage.ts` — File-system read/write of `data/protected-terms.json` (glossary surface) + `data/prompts.json`
+  - `sanity.ts` — HTTP API client (no SDK)
+  - `translator.ts` — Anthropic SDK wrapper used by the translate endpoints
   - `client-storage.ts` — Fetch wrappers for the API routes
 - **`data/`** — JSON seed/state files
-  - `glossary.json` — User-editable glossary entries
   - `prompts.json` — Per-language translation rules (matches main project)
-  - `protected-terms.json` — 437 protected terms (brands, colors, product names) — DO NOT translate
+  - `protected-terms.json` — Protected terms grouped by category (`companyNames`, `collectionNames`, `wordsAndPhrases`, `colors`, `productNames`) — DO NOT translate. Read AND written by the Glossary screen.
 
 ### Routing
 
-The app uses a single-page shell (`app/page.tsx`) with client-side route state (`'documents' | 'viewer' | 'prompts' | 'jobs' | 'glossary' | 'settings'`). The selected route is persisted in `localStorage`.
+The app uses a single-page shell (`app/page.tsx`) with hash-based routing. `window.location.hash` is the source of truth: `#settings`, `#prompts`, `#glossary`, `#free-text`, `#viewer/<docId>`, or empty for documents. Reload, browser back/forward, and shareable deep-links all work.
 
 ### State persistence
 
-- **Client state** (route, tweaks): `localStorage` keys `pns.route` and `pns.tweaks`
-- **Server state** (glossary, prompts): JSON files in `data/`, written atomically via `.tmp` rename
+- **Route**: URL hash (`window.location.hash`)
+- **UI tweaks**: `localStorage` key `pns.tweaks`
+- **Glossary / prompts**: JSON files in `data/`, written atomically via `.tmp` rename
+- **Documents**: live from Sanity — no local cache
 - No database
 
 ### Iframe integration
@@ -99,14 +105,12 @@ These are committed to git so the knowledge is shared across collaborators and f
 - Reframe "limited protection" positively → `gezielten Schutz`
 - Portable text: preserve EN block structure exactly (same `_key`, same number of blocks/spans)
 
-### Sanity integration (future — not yet implemented here)
+### Sanity integration
 
-When wiring this tool to Sanity, the main project uses the **Sanity HTTP API directly** (not MCP tools). Config:
-- Project ID: `k15yl91v`
-- Dataset: `production`
-- API version: `2025-02-19`
-- Always query with `perspective=previewDrafts`
-- **Draft-aware patching:** check if `drafts.{id}` exists before patching; patch the draft ID if it does
+Wired via `lib/sanity.ts` using the **Sanity HTTP API directly** (not the SDK). Config lives in env vars consumed by that module. Conventions:
+- Always query with `perspective=raw` to surface both drafts and published rows; the API routes pick the live one (draft if it exists).
+- **Draft-aware patching:** check if `drafts.{id}` exists before patching; patch the draft ID if it does.
+- Translatable-field metadata (per `_type`) lives in `lib/translatable-fields.ts`.
 
 See `memory/translation-phase2-process.md` for the full HTTP API flow (merged audit+fetch, batch mutations, batch publish).
 
@@ -116,11 +120,10 @@ See `memory/translation-phase2-process.md` for the full HTTP API flow (merged au
 - **Path alias:** `@/*` → project root (see `tsconfig.json`)
 - **`'use client'`** directive needed for any component using hooks/localStorage/window
 - **Types in `lib/types.ts`** — add new types there, not inline
-- **Mock data in `lib/data.ts`** — keep seed/fake data isolated until real data layer exists
 - **Atomic file writes** — use the pattern in `lib/server-storage.ts` (tmp file + rename)
 
 ## What to avoid
 
-- Don't add Sanity SDK (`@sanity/client`, `next-sanity`) — this tool currently has no Sanity connection. Use the HTTP API pattern from the main project if/when you wire it up.
-- Don't add a database — state lives in JSON files + localStorage by design.
+- Don't add the Sanity SDK (`@sanity/client`, `next-sanity`) — keep using the HTTP API pattern in `lib/sanity.ts`.
+- Don't add a database — glossary/prompts live in JSON files; route lives in URL hash; documents live in Sanity.
 - Don't translate protected terms, even if they look translatable.

@@ -209,13 +209,11 @@ export const ViewerScreen = ({ docId, target, setTarget, diffMode, setDiffMode, 
             <LangChip code="en" source />
             <span style={{ fontWeight: 500, color: 'var(--ink)' }}>English</span>
             <span style={{ color: 'var(--ink-4)' }}>· source</span>
-            <span className="meta">revised 2d ago</span>
           </div>
           <div className="pane-hd">
             <LangChip code={target} />
             <span style={{ fontWeight: 500, color: 'var(--ink)' }}>{targetLang.label}</span>
             <span style={{ color: 'var(--ink-4)' }}>· target</span>
-            <span className="meta">claude-opus-4-7</span>
           </div>
         </div>
 

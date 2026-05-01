@@ -56,7 +56,7 @@ export const Sidebar = ({ route, setRoute, counts }: SidebarProps) => {
       </div>
       <div className="group">
         <div className="hd">Configure</div>
-        {nav("prompts", "Prompts", IcPrompt, "3")}
+        {nav("prompts", "Prompts", IcPrompt)}
         {nav("glossary", "Glossary", IcGlossary, counts.glossary)}
         {nav("settings", "Settings", IcSettings)}
       </div>

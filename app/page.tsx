@@ -1,23 +1,33 @@
-'use client';
+"use client";
 
-import { useCallback, useEffect, useState } from 'react';
-import { BulkModal } from '@/components/bulk-modal';
-import { IcSearch } from '@/components/icons';
-import { Kbd } from '@/components/primitives';
-import { DocumentsScreen, type DocsFilter } from '@/components/screens/documents';
-import { FreeTextScreen } from '@/components/screens/free-text';
-import { GlossaryScreen } from '@/components/screens/glossary';
-import { PromptsScreen } from '@/components/screens/prompts';
-import { SettingsScreen } from '@/components/screens/settings';
-import { ViewerScreen } from '@/components/screens/viewer';
-import { Sidebar, TopNav, type Route } from '@/components/sidebar';
-import { TweaksPanel } from '@/components/tweaks-panel';
-import { fetchDocuments } from '@/lib/client-storage';
-import { GLOSSARY, TWEAK_DEFAULTS } from '@/lib/data';
-import type { DocRecord, LangCode, Tweaks } from '@/lib/types';
+import { useCallback, useEffect, useState } from "react";
+import { BulkModal } from "@/components/bulk-modal";
+import { IcSearch } from "@/components/icons";
+import { Kbd } from "@/components/primitives";
+import {
+  DocumentsScreen,
+  type DocsFilter,
+} from "@/components/screens/documents";
+import { FreeTextScreen } from "@/components/screens/free-text";
+import { GlossaryScreen } from "@/components/screens/glossary";
+import { PromptsScreen } from "@/components/screens/prompts";
+import { SettingsScreen } from "@/components/screens/settings";
+import { ViewerScreen } from "@/components/screens/viewer";
+import { Sidebar, TopNav, type Route } from "@/components/sidebar";
+import { TweaksPanel } from "@/components/tweaks-panel";
+import { fetchDocuments } from "@/lib/client-storage";
+import { GLOSSARY, TWEAK_DEFAULTS } from "@/lib/data";
+import type { DocRecord, LangCode, Tweaks } from "@/lib/types";
 
 const isRoute = (v: string): v is Route =>
-  ['documents', 'viewer', 'free-text', 'prompts', 'glossary', 'settings'].includes(v);
+  [
+    "documents",
+    "viewer",
+    "free-text",
+    "prompts",
+    "glossary",
+    "settings",
+  ].includes(v);
 
 interface RouteState {
   route: Route;
@@ -25,28 +35,29 @@ interface RouteState {
 }
 
 const parseHash = (hash: string): RouteState => {
-  const raw = hash.replace(/^#\/?/, '');
-  if (!raw) return { route: 'documents', docId: null };
-  const [first, ...rest] = raw.split('/');
-  if (first === 'viewer' && rest[0]) {
-    return { route: 'viewer', docId: decodeURIComponent(rest[0]) };
+  const raw = hash.replace(/^#\/?/, "");
+  if (!raw) return { route: "documents", docId: null };
+  const [first, ...rest] = raw.split("/");
+  if (first === "viewer" && rest[0]) {
+    return { route: "viewer", docId: decodeURIComponent(rest[0]) };
   }
-  if (isRoute(first) && first !== 'viewer') {
+  if (isRoute(first) && first !== "viewer") {
     return { route: first, docId: null };
   }
-  return { route: 'documents', docId: null };
+  return { route: "documents", docId: null };
 };
 
 const formatHash = (route: Route, docId: string | null): string => {
-  if (route === 'viewer' && docId) return `#viewer/${encodeURIComponent(docId)}`;
-  if (route === 'documents' || (route === 'viewer' && !docId)) return '';
+  if (route === "viewer" && docId)
+    return `#viewer/${encodeURIComponent(docId)}`;
+  if (route === "documents" || (route === "viewer" && !docId)) return "";
   return `#${route}`;
 };
 
 export default function App() {
-  const [route, setRoute] = useState<Route>('documents');
+  const [route, setRoute] = useState<Route>("documents");
   const [docId, setDocId] = useState<string | null>(null);
-  const [target, setTarget] = useState<LangCode>('de');
+  const [target, setTarget] = useState<LangCode>("de");
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkInitial, setBulkInitial] = useState<string[]>([]);
   const [tweaks, setTweaks] = useState<Tweaks>(TWEAK_DEFAULTS);
@@ -54,8 +65,8 @@ export default function App() {
   const [docs, setDocs] = useState<DocRecord[]>([]);
   const [docsLoading, setDocsLoading] = useState(true);
   const [docsError, setDocsError] = useState<string | null>(null);
-  const [docsFilter, setDocsFilter] = useState<DocsFilter>('product');
-  const [docsSearch, setDocsSearch] = useState('');
+  const [docsFilter, setDocsFilter] = useState<DocsFilter>("product");
+  const [docsSearch, setDocsSearch] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -67,7 +78,7 @@ export default function App() {
       })
       .catch((e: unknown) => {
         if (cancelled) return;
-        setDocsError(e instanceof Error ? e.message : 'Unknown error');
+        setDocsError(e instanceof Error ? e.message : "Unknown error");
       })
       .finally(() => {
         if (!cancelled) setDocsLoading(false);
@@ -87,14 +98,14 @@ export default function App() {
       setDocId(next.docId);
     };
     sync();
-    window.addEventListener('hashchange', sync);
-    return () => window.removeEventListener('hashchange', sync);
+    window.addEventListener("hashchange", sync);
+    return () => window.removeEventListener("hashchange", sync);
   }, []);
 
   // Tweaks still persist to localStorage — separate concern from routing.
   useEffect(() => {
     try {
-      const t = localStorage.getItem('pns.tweaks');
+      const t = localStorage.getItem("pns.tweaks");
       if (t) setTweaks((s) => ({ ...s, ...JSON.parse(t) }));
     } catch {
       /* ignore */
@@ -102,22 +113,25 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('pns.tweaks', JSON.stringify(tweaks));
+    localStorage.setItem("pns.tweaks", JSON.stringify(tweaks));
   }, [tweaks]);
 
   useEffect(() => {
     const onMsg = (e: MessageEvent) => {
       if (!e.data || !e.data.type) return;
-      if (e.data.type === '__activate_edit_mode') setEditActive(true);
-      if (e.data.type === '__deactivate_edit_mode') setEditActive(false);
+      if (e.data.type === "__activate_edit_mode") setEditActive(true);
+      if (e.data.type === "__deactivate_edit_mode") setEditActive(false);
     };
-    window.addEventListener('message', onMsg);
-    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
-    return () => window.removeEventListener('message', onMsg);
+    window.addEventListener("message", onMsg);
+    window.parent.postMessage({ type: "__edit_mode_available" }, "*");
+    return () => window.removeEventListener("message", onMsg);
   }, []);
 
   useEffect(() => {
-    window.parent.postMessage({ type: '__edit_mode_set_keys', edits: tweaks }, '*');
+    window.parent.postMessage(
+      { type: "__edit_mode_set_keys", edits: tweaks },
+      "*",
+    );
   }, [tweaks]);
 
   const counts = {
@@ -132,17 +146,17 @@ export default function App() {
     const cur = window.location.hash;
     if (next === cur) return;
     const url = next || window.location.pathname + window.location.search;
-    window.history.pushState(null, '', url);
+    window.history.pushState(null, "", url);
   }, []);
 
-  const openDoc = (id: string) => navigate('viewer', id);
+  const openDoc = (id: string) => navigate("viewer", id);
   const back = () => {
     // If there's a previous entry, let the browser go back so back/forward
     // history stays intact. Otherwise fall back to the documents list.
     if (window.history.length > 1) {
       window.history.back();
     } else {
-      navigate('documents');
+      navigate("documents");
     }
   };
   const bulk = (ids: string[]) => {
@@ -151,7 +165,7 @@ export default function App() {
   };
 
   const renderMain = () => {
-    if (route === 'documents')
+    if (route === "documents")
       return (
         <DocumentsScreen
           layout={tweaks.layout}
@@ -166,7 +180,7 @@ export default function App() {
           setSearch={setDocsSearch}
         />
       );
-    if (route === 'viewer')
+    if (route === "viewer")
       return (
         <ViewerScreen
           docId={docId}
@@ -177,37 +191,33 @@ export default function App() {
           onBack={back}
         />
       );
-    if (route === 'free-text') return <FreeTextScreen />;
-    if (route === 'prompts') return <PromptsScreen docs={docs} />;
-    if (route === 'glossary') return <GlossaryScreen />;
-    if (route === 'settings') return <SettingsScreen />;
+    if (route === "free-text") return <FreeTextScreen />;
+    if (route === "prompts") return <PromptsScreen docs={docs} />;
+    if (route === "glossary") return <GlossaryScreen />;
+    if (route === "settings") return <SettingsScreen />;
     return null;
   };
 
   const crumbs: Record<Route, { label: string }> = {
-    documents: { label: 'Documents' },
-    viewer: { label: docId ? `Documents / ${docId}` : 'Documents' },
-    'free-text': { label: 'Free Text' },
-    prompts: { label: 'Prompts' },
-    glossary: { label: 'Glossary' },
-    settings: { label: 'Settings' },
+    documents: { label: "Documents" },
+    viewer: { label: docId ? `Documents / ${docId}` : "Documents" },
+    "free-text": { label: "Free Text" },
+    prompts: { label: "Prompts" },
+    glossary: { label: "Glossary" },
+    settings: { label: "Settings" },
   };
   const cur = crumbs[route];
 
-  const shellClass = tweaks.nav === 'topbar' ? 'shell nav-top' : 'shell';
+  const shellClass = tweaks.nav === "topbar" ? "shell nav-top" : "shell";
 
   return (
     <div className={shellClass} data-density={tweaks.density}>
-      {tweaks.nav === 'sidebar' && (
-        <Sidebar
-          route={route}
-          setRoute={(r) => navigate(r)}
-          counts={counts}
-        />
+      {tweaks.nav === "sidebar" && (
+        <Sidebar route={route} setRoute={(r) => navigate(r)} counts={counts} />
       )}
-      {tweaks.nav === 'topbar' && (
+      {tweaks.nav === "topbar" && (
         <TopNav
-          route={route === 'viewer' ? 'documents' : route}
+          route={route === "viewer" ? "documents" : route}
           setRoute={(r) => navigate(r)}
         />
       )}
@@ -219,29 +229,6 @@ export default function App() {
             <span className="current">{cur.label}</span>
           </div>
           <div style={{ flex: 1 }} />
-          {tweaks.nav === 'sidebar' && (
-            <div className="cmdk">
-              <IcSearch size={13} />
-              <span style={{ flex: 1 }}>Find document, language, prompt…</span>
-              <Kbd>⌘K</Kbd>
-            </div>
-          )}
-          <button className="btn ghost icon" title="Notifications">
-            <svg
-              className="ico"
-              width={14}
-              height={14}
-              viewBox="0 0 16 16"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={1.5}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M4 7a4 4 0 0 1 8 0v2l1.5 2.5h-11L4 9V7Z" />
-              <path d="M6.5 13a1.5 1.5 0 0 0 3 0" />
-            </svg>
-          </button>
         </div>
         <div className="content">{renderMain()}</div>
       </div>
@@ -257,7 +244,7 @@ export default function App() {
             fetchDocuments()
               .then((d) => setDocs(d))
               .catch((e: unknown) =>
-                setDocsError(e instanceof Error ? e.message : 'Unknown error')
+                setDocsError(e instanceof Error ? e.message : "Unknown error"),
               );
           }}
         />

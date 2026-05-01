@@ -11,7 +11,6 @@ import {
   IcOpen,
   IcPlus,
   IcSearch,
-  IcSync,
   IcX,
 } from '../icons';
 import {
@@ -66,11 +65,6 @@ export const DocumentsScreen = ({ layout, docs, loading, error, onOpenDoc, onBul
           </div>
         </div>
         <div className="spacer" />
-        <div className="page-actions">
-          <button className="btn">
-            <IcSync /> Sync from Sanity
-          </button>
-        </div>
       </div>
 
       <div className="toolbar">

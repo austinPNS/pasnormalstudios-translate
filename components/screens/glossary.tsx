@@ -11,7 +11,7 @@ import {
   type ProtectedCategory,
 } from '@/lib/protected-terms';
 import type { GlossaryRow } from '@/lib/types';
-import { IcOpen, IcPlus, IcSearch, IcX } from '../icons';
+import { IcPlus, IcSearch, IcX } from '../icons';
 import { Seg } from '../primitives';
 
 type ScopeFilter = 'all' | ProtectedCategory;
@@ -249,9 +249,6 @@ export const GlossaryScreen = () => {
         </div>
         <div className="spacer" />
         <div className="page-actions">
-          <button className="btn">
-            <IcOpen /> Import CSV
-          </button>
           <button className="btn primary" onClick={() => setAdding(true)}>
             <IcPlus /> Add term
           </button>

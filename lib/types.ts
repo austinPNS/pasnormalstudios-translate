@@ -78,19 +78,6 @@ export interface PromptEntry {
 export type PromptKey = 'general' | Exclude<LangCode, 'en'>;
 export type PromptsMap = Partial<Record<PromptKey, PromptEntry>>;
 
-export interface JobRecord {
-  id: string;
-  docTitle: string;
-  docId: string;
-  targets: Exclude<LangCode, 'en'>[];
-  fields: number;
-  done: number;
-  status: Status;
-  startedBy: string;
-  started: string;
-  eta: string;
-}
-
 export interface GlossaryRow {
   src: string;
   de: string;
@@ -99,28 +86,6 @@ export interface GlossaryRow {
   kind: 'dnt' | 'brand';
   scope: string;
   notes?: string;
-}
-
-export interface FreeTextHistoryItem {
-  id: string;
-  sourceLang: LangCode;
-  targetLang: Exclude<LangCode, 'en'>;
-  sourceText: string;
-  outputText: string;
-  tone: string;
-  usedGlossary: string[];
-  usedRules: string[];
-  updated: string;
-}
-
-export interface FreeTextPreset {
-  id: string;
-  label: string;
-  sourceText: string;
-  outputs: Record<Exclude<LangCode, 'en'>, string>;
-  tone: string;
-  glossaryHits: string[];
-  rules: string[];
 }
 
 export type Tweaks = {
