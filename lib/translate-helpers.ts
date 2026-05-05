@@ -66,7 +66,8 @@ export const getConfig = (sanityType: string): SanityTypeConfig => {
 export const collectItems = (
   row: Record<string, unknown>,
   config: SanityTypeConfig,
-  target: Target
+  target: Target,
+  force = false
 ): { items: CollectedItem[]; portableTextFields: PortableTextField[] } => {
   const items: CollectedItem[] = [];
   const portableTextFields: PortableTextField[] = [];
@@ -75,7 +76,8 @@ export const collectItems = (
     if (f.kind === 'portableText') {
       const en = row[aliasFor(f.path, 'en')];
       const tg = row[aliasFor(f.path, target)];
-      if (!isPortableTextPresent(en) || !isPortableTextMissing(tg)) continue;
+      if (!isPortableTextPresent(en)) continue;
+      if (!force && !isPortableTextMissing(tg)) continue;
       portableTextFields.push({ fieldPath: f.path, enBlocks: en });
       for (const block of en) {
         if (!block || typeof block !== 'object') continue;
@@ -100,7 +102,7 @@ export const collectItems = (
     if (!COLLECTABLE.has(f.kind)) continue;
     const en = row[aliasFor(f.path, 'en')];
     const tg = row[aliasFor(f.path, target)];
-    if (isPresent(en) && isMissing(tg)) {
+    if (isPresent(en) && (force || isMissing(tg))) {
       items.push({
         key: f.path,
         kind: f.kind as 'string' | 'text',
@@ -122,7 +124,7 @@ export const collectItems = (
         if (!COLLECTABLE.has(sub.kind)) continue;
         const en = item[aliasFor(sub.path, 'en')];
         const tg = item[aliasFor(sub.path, target)];
-        if (isPresent(en) && isMissing(tg)) {
+        if (isPresent(en) && (force || isMissing(tg))) {
           items.push({
             key: `${group.path}[${key}].${sub.path}`,
             kind: sub.kind as 'string' | 'text',
@@ -145,7 +147,7 @@ export const collectItems = (
       if (!key) continue;
       const en = item['value_en'];
       const tg = item[`value_${target}`];
-      if (isPresent(en) && isMissing(tg)) {
+      if (isPresent(en) && (force || isMissing(tg))) {
         items.push({
           key: `${arr.path}[${key}]`,
           kind: arr.kind as 'string' | 'text',

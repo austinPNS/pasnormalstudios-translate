@@ -12,6 +12,7 @@ Project-specific knowledge for the `pns-translate` translation management UI. Tr
 
 ## Translation Style Guides
 - [German (DE) style guide](translation-style-de.md) — gender prefixes (Männer/Frauen for products, Herren/Damen for categories), tone, 30+ locked terms, spec patterns, portable text rules
+- [French (FR) style guide](translation-style-fr.md) — product-type-first syntax (Jersey Essential Femme), vous form, locked terms (boulochage, fermeture, sportives), cycling-idiom rules
 
 ## Translation Rules
 - [Prompt cache warming for bulk Claude calls](feedback-prompt-cache-warming.md) — run first call alone, then parallel; concurrent first-fires all miss the cache

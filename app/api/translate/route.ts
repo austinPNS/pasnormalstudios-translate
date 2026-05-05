@@ -22,7 +22,7 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 export async function POST(req: Request) {
-  let body: { docId?: unknown; target?: unknown };
+  let body: { docId?: unknown; target?: unknown; retranslate?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -35,6 +35,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'target must be de|fr|it' }, { status: 400 });
   }
   const target = body.target as Target;
+  const retranslate = body.retranslate === true;
 
   // Accept either bare or drafts-prefixed id from the client.
   const baseId = docId.startsWith('drafts.') ? docId.slice('drafts.'.length) : docId;
@@ -67,7 +68,7 @@ export async function POST(req: Request) {
     if (!row) return NextResponse.json({ error: 'Projection returned null' }, { status: 500 });
 
     // 3. Collect items missing the target translation
-    const { items, portableTextFields } = collectItems(row, config, target);
+    const { items, portableTextFields } = collectItems(row, config, target, retranslate);
     if (items.length === 0) {
       return NextResponse.json({ translated: 0, message: 'Nothing to translate.' });
     }

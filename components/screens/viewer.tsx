@@ -21,8 +21,9 @@ export const ViewerScreen = ({ docId, target, setTarget, diffMode, setDiffMode, 
   const [doc, setDoc] = useState<SampleDoc | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [running, setRunning] = useState(false);
+  const [runningMode, setRunningMode] = useState<'run' | 'retranslate' | null>(null);
   const [runMsg, setRunMsg] = useState<string | null>(null);
+  const running = runningMode !== null;
 
   const reload = (id: string) => {
     let cancelled = false;
@@ -56,25 +57,26 @@ export const ViewerScreen = ({ docId, target, setTarget, diffMode, setDiffMode, 
     return reload(docId);
   }, [docId]);
 
-  const onRun = async () => {
+  const onRun = async (mode: 'run' | 'retranslate' = 'run') => {
     if (!docId || running) return;
-    setRunning(true);
+    setRunningMode(mode);
     setRunMsg(null);
     try {
       const res = await fetch('/api/translate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ docId, target }),
+        body: JSON.stringify({ docId, target, retranslate: mode === 'retranslate' }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
       const n = json.translated ?? 0;
-      setRunMsg(n === 0 ? 'Nothing to translate.' : `Translated ${n} field${n === 1 ? '' : 's'}.`);
+      const verb = mode === 'retranslate' ? 'Re-translated' : 'Translated';
+      setRunMsg(n === 0 ? 'Nothing to translate.' : `${verb} ${n} field${n === 1 ? '' : 's'}.`);
       if (n > 0) reload(docId);
     } catch (e: unknown) {
       setRunMsg(`Error: ${e instanceof Error ? e.message : 'Unknown error'}`);
     } finally {
-      setRunning(false);
+      setRunningMode(null);
     }
   };
 
@@ -194,12 +196,20 @@ export const ViewerScreen = ({ docId, target, setTarget, diffMode, setDiffMode, 
           </span>
         )}
         <button
-          className="btn primary sm"
-          onClick={onRun}
+          className="btn sm"
+          onClick={() => onRun('retranslate')}
           disabled={running || !docId}
           style={running ? { opacity: 0.6, cursor: 'wait' } : undefined}
         >
-          <IcPlay /> {running ? 'Running…' : 'Run'}
+          <IcPlay /> {runningMode === 'retranslate' ? 'Running…' : 'Re-Translate'}
+        </button>
+        <button
+          className="btn primary sm"
+          onClick={() => onRun('run')}
+          disabled={running || !docId}
+          style={running ? { opacity: 0.6, cursor: 'wait' } : undefined}
+        >
+          <IcPlay /> {runningMode === 'run' ? 'Running…' : 'Run'}
         </button>
       </div>
 
