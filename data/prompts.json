@@ -26,7 +26,7 @@
       "- Use cycling terminology that German cyclists naturally use.",
       "- Use established German textile terms instead of literal translations.",
       "- Keep brand and collection names in English.",
-      "- Keep technical product terms like 'Bibs', 'Jersey', 'Speedsuit' in English.",
+      "- Keep technical product terms — 'Bibs', 'Jersey', 'Speedsuit', 'Skinsuit', 'Base Layer' — in English everywhere (titles AND body copy). Never decline or pluralize them in German.",
       "- Gendered product titles: translate only the gender prefix. Example: 'Women’s Essential Jersey' → 'Frauen Essential Jersey'. Always place gender first.",
       "- Not use 'Essential' instead use 'Basis' or 'Klassisch' depending on context except in product names.",
       "- Do not translate the color",
@@ -74,7 +74,7 @@
       "- Use cycling terminology that French cyclists naturally use.",
       "- Use established French textile terms instead of literal translations.",
       "- Keep brand and collection names in English.",
-      "- Keep technical product terms like “Bibs”, “Jersey”, “Speedsuit” in English.",
+      "- Product type nouns (Jersey, Bibs, Speedsuit, Skinsuit, Base Layer): keep in English IN TITLES ONLY. In body copy (descriptions, specifications, feature text), translate them to natural French — Jersey → maillot, Bibs → cuissard, Speedsuit → combinaison, Skinsuit → combinaison, Base Layer → sous-vêtement technique. The translatable item's `key` indicates the field path: keys named `title` / `*Title` are titles; everything else is body copy.",
       "- Keep cycling event terms like “sportives” in English. Do NOT translate to “cyclosportives”, which reads awkwardly to native speakers.",
       "- Gendered product titles in FR: rearrange to follow French apparel syntax — put the PRODUCT TYPE NOUN (Jersey, Bibs, Speedsuit, etc.) FIRST, then the collection/qualifier descriptors, then “Femme” or “Homme” as suffix at the END.",
       "    Example: “Women’s Essential Jersey” → “Jersey Essential Femme” (NOT “Essential Jersey Femme”, NOT “Femme Essential Jersey”).",
@@ -132,21 +132,35 @@
       "    Example: “to eliminate fabric pilling” → “pour éviter le boulochage”.",
       "- Translate “puller” (the part of a zipper you grab) as “fermeture”. Do NOT use “curseur”.",
       "    Example: “semi auto-lock puller” → “fermeture semi-auto-lock”.",
-      "    Example: “robust YKK zipper with semi auto-lock puller” → “zip YKK robuste avec fermeture semi-auto-lock”.",
+      "    Example: “robust YKK zipper with semi auto-lock puller” → “fermeture éclair YKK robuste avec fermeture semi-auto-lock”.",
       "- For layering or usage instructions, use direct “vous”-form commands (“Portez-le…”, “Associez-le…”) and keep the tone refined and elegant.",
       "- Simplify time and weather expressions:",
       "  • “on chill mornings” → “le matin quand il fait plus frais”.",
       "  • “when the temperature drops” → “quand il fait plus froid”.",
       "- Prefer natural French equivalents for common terms:",
       "  • “outer layer” → simplify or omit if unnecessary.",
-      "  • “gilet” stays in French as “gilet” — it is already the natural French word (no English↔French swap needed, unlike German where “Gilet” stays in titles but becomes “Weste” in descriptions).",
-      "  • “Baselayer” stays English.",
+      "  • “gilet” stays in French as “gilet” — it is already the natural French word.",
+      "",
+      "LEXICAL & PHRASING DETAILS (FR):",
+      "- Translate “zip” / “zipper” (the noun) as “fermeture éclair” (use “fermeture éclair YKK” when YKK-branded). Do NOT keep “zip” in French copy.",
+      "- For skin-related text, prefer “peau” over “cutané/cutanée”: write “irritation de la peau”, not “irritation cutanée”.",
+      "- For intensification, prefer “davantage” over “plus”: “Il offre davantage de protection”, not “Il offre plus de protection”.",
+      "- For component callouts, drop the indefinite article: write “avec insert”, not “avec un insert”.",
+      "- For “outside of training” contexts, use “hors entrainement structuré ou compétition” — a more precise scope than “en dehors de l’entrainement”.",
+      "- When a generic plural noun is preceded by an adjective, use “de” not “des”: write “lors de sorties prolongées”, not “lors des sorties prolongées”.",
+      "- For marketing copy referring to light rain, prefer fronted-adjective order “légère pluie” over post-position “pluie légère” — reads more elegant and literary.",
+      "- Temperature suitability template: “Ce [maillot/cuissard/...] est idéal pour des sorties en températures [douces à élevées / fraîches à froides / ...].” Apply consistently across product temperature sections.",
+      "- For training intensity, prefer “intense(s)” or “soutenu(s)” over “rapide(s)”. Write “entrainements intenses”, not “entrainements rapides”.",
+      "- Avoid fronted adjective phrases like “À séchage rapide, il…”. Prefer relative-clause or “Grâce à…” framings: “Grâce à sa matière séchant rapidement, il absorbe la transpiration…”.",
+      "- For the bottom band of a jersey (waist-area grippers), use “hanches” not “taille” — the elastic band anatomically sits at the hips. Write “bandes élastiques de hanches”, not “bandes élastiques de taille”.",
       "",
       "CRITICAL RULES (FR-specific):",
       "- If the source text is already in French, copy it verbatim."
     ]
   },
   "it": {
-    "specialRules": []
+    "specialRules": [
+      "- Keep technical product terms — 'Bibs', 'Jersey', 'Speedsuit', 'Skinsuit', 'Base Layer' — in English in both titles and body copy until an Italian-specific policy is decided."
+    ]
   }
 }
