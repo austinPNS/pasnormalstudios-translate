@@ -4,11 +4,11 @@ import {
   sanityMutate,
   SanityConfigError,
   SanityQueryError,
-  type SanityMutation,
 } from '@/lib/sanity';
 import { buildDetailProjection } from '@/lib/translatable-fields';
 import { translate, TranslatorError } from '@/lib/translator';
 import {
+  buildMutations,
   buildPatchSets,
   collectItems,
   getConfig,
@@ -79,31 +79,33 @@ export async function POST(req: Request) {
       target as Exclude<LangCode, 'en'>
     );
 
-    // 5. Build patch sets (portable text reassembled per feedback rule #2)
-    const { sets, missingFromResponse } = buildPatchSets(
+    // 5. Build patch sets (portable text reassembled per feedback rule #2).
+    // Existing lang items are `set`; missing ones become array `insert`s.
+    const { sets, inserts, missingFromResponse } = buildPatchSets(
       items,
       portableTextFields,
       result.translations,
       target
     );
 
-    if (Object.keys(sets).length === 0) {
+    if (Object.keys(sets).length === 0 && inserts.length === 0) {
       return NextResponse.json(
         { error: 'Translator returned no usable translations', missingFromResponse },
         { status: 502 }
       );
     }
 
+    const fieldsWritten = Object.keys(sets).length + inserts.length;
+
     // translationMeta — used by stale detection (lastTranslatedAt < _updatedAt → stale)
     // and to track which language was most recently translated.
     sets['translationMeta.lastTranslatedAt'] = new Date().toISOString();
     sets['translationMeta.targetLanguage'] = target;
 
-    const mutations: SanityMutation[] = [{ patch: { id: meta._id, set: sets } }];
-    await sanityMutate(mutations);
+    await sanityMutate(buildMutations(meta._id, sets, inserts));
 
     return NextResponse.json({
-      translated: Object.keys(sets).length,
+      translated: fieldsWritten,
       requested: items.length,
       missingFromResponse,
       patchedId: meta._id,

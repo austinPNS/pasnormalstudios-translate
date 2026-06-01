@@ -1,9 +1,25 @@
 import {
   SANITY_TYPES,
   aliasFor,
+  keysAlias,
   type SanityTypeConfig,
 } from './translatable-fields';
 import type { TranslationItem } from './translator';
+
+// `_type` of the value object inside each internationalized-array field, by
+// field kind. Required when inserting a brand-new language item.
+const I18N_VALUE_TYPE: Record<string, string> = {
+  string: 'internationalizedArrayStringValue',
+  text: 'internationalizedArrayTextValue',
+  portableText: 'internationalizedArrayPortableTextValue',
+};
+
+// One language item to insert into an i18n-array field that has no item for the
+// target language yet (e.g. { _key: "fr", _type: "...", value }).
+export interface PatchInsert {
+  fieldPath: string;
+  item: { _key: string; _type: string; value: unknown };
+}
 
 export const TARGETS = ['de', 'fr', 'it'] as const;
 export type Target = (typeof TARGETS)[number];
@@ -18,6 +34,9 @@ const COLLECTABLE = new Set(['string', 'text']);
 export interface CollectedItem extends TranslationItem {
   // Sanity patch path (e.g. "title", "specifications[_key==\"abc\"].description")
   patchPath: string;
+  // Whether a `[_key=="<target>"]` item already exists in this field's array.
+  // True → set the existing item's `.value`; false → insert a new lang item.
+  targetExists: boolean;
 }
 
 export interface PortableTextSpan {
@@ -38,7 +57,12 @@ export interface PortableTextBlock {
 export interface PortableTextField {
   fieldPath: string;
   enBlocks: PortableTextBlock[];
+  targetExists: boolean;
 }
+
+// Does the projected key-list for a field contain an item for `target`?
+const hasTargetKey = (keys: unknown, target: string): boolean =>
+  Array.isArray(keys) && keys.includes(target);
 
 const isMissing = (target: unknown): boolean =>
   target === null || target === undefined || (typeof target === 'string' && target.trim() === '');
@@ -78,7 +102,8 @@ export const collectItems = (
       const tg = row[aliasFor(f.path, target)];
       if (!isPortableTextPresent(en)) continue;
       if (!force && !isPortableTextMissing(tg)) continue;
-      portableTextFields.push({ fieldPath: f.path, enBlocks: en });
+      const targetExists = hasTargetKey(row[keysAlias(f.path)], target);
+      portableTextFields.push({ fieldPath: f.path, enBlocks: en, targetExists });
       for (const block of en) {
         if (!block || typeof block !== 'object') continue;
         const b = block as PortableTextBlock;
@@ -94,6 +119,7 @@ export const collectItems = (
             kind: 'text',
             source: s.text,
             patchPath: f.path,
+            targetExists,
           });
         }
       }
@@ -108,6 +134,7 @@ export const collectItems = (
         kind: f.kind as 'string' | 'text',
         source: en,
         patchPath: f.path,
+        targetExists: hasTargetKey(row[keysAlias(f.path)], target),
       });
     }
   }
@@ -130,30 +157,9 @@ export const collectItems = (
             kind: sub.kind as 'string' | 'text',
             source: en,
             patchPath: `${group.path}[_key=="${key}"].${sub.path}`,
+            targetExists: hasTargetKey(item[keysAlias(sub.path)], target),
           });
         }
-      }
-    }
-  }
-
-  for (const arr of config.i18nArrays ?? []) {
-    if (!COLLECTABLE.has(arr.kind)) continue;
-    const list = row[arr.path];
-    if (!Array.isArray(list)) continue;
-    for (const entry of list) {
-      if (!entry || typeof entry !== 'object') continue;
-      const item = entry as Record<string, unknown>;
-      const key = typeof item._key === 'string' ? item._key : null;
-      if (!key) continue;
-      const en = item['value_en'];
-      const tg = item[`value_${target}`];
-      if (isPresent(en) && (force || isMissing(tg))) {
-        items.push({
-          key: `${arr.path}[${key}]`,
-          kind: arr.kind as 'string' | 'text',
-          source: en,
-          patchPath: `${arr.path}[_key=="${key}"]`,
-        });
       }
     }
   }
@@ -190,18 +196,19 @@ export const rebuildPortableText = (
   });
 };
 
-const isI18nArrayItemPath = (path: string): boolean => /\[_key==".+"\]$/.test(path);
-
-// Combine collected items + translator output into a Sanity-ready set object.
-// Portable-text items are reassembled into a single field-level set value;
-// flat/nested/i18n items are set per-path.
+// Combine collected items + translator output into Sanity-ready mutations.
+// For each translatable field, the target language is written by either:
+//   - set    — `field[_key=="<target>"].value` when that lang item exists, or
+//   - insert — a new `{ _key, _type, value }` appended to the array otherwise.
+// Portable-text items are reassembled into a single field-level value.
 export const buildPatchSets = (
   items: CollectedItem[],
   portableTextFields: PortableTextField[],
   translations: Record<string, string>,
   target: Target
-): { sets: Record<string, unknown>; missingFromResponse: string[] } => {
+): { sets: Record<string, unknown>; inserts: PatchInsert[]; missingFromResponse: string[] } => {
   const sets: Record<string, unknown> = {};
+  const inserts: PatchInsert[] = [];
   const missingFromResponse: string[] = [];
 
   const portableTextItemKeys = new Set<string>();
@@ -218,16 +225,53 @@ export const buildPatchSets = (
       missingFromResponse.push(item.key);
       continue;
     }
-    const path = isI18nArrayItemPath(item.patchPath)
-      ? `${item.patchPath}.${target}`
-      : `${item.patchPath}.${target}`;
-    sets[path] = value;
+    if (item.targetExists) {
+      sets[`${item.patchPath}[_key=="${target}"].value`] = value;
+    } else {
+      inserts.push({
+        fieldPath: item.patchPath,
+        item: { _key: target, _type: I18N_VALUE_TYPE[item.kind], value },
+      });
+    }
   }
 
   for (const pt of portableTextFields) {
     const blocks = rebuildPortableText(pt, translations, missingFromResponse);
-    sets[`${pt.fieldPath}.${target}`] = blocks;
+    if (pt.targetExists) {
+      sets[`${pt.fieldPath}[_key=="${target}"].value`] = blocks;
+    } else {
+      inserts.push({
+        fieldPath: pt.fieldPath,
+        item: { _key: target, _type: I18N_VALUE_TYPE.portableText, value: blocks },
+      });
+    }
   }
 
-  return { sets, missingFromResponse };
+  return { sets, inserts, missingFromResponse };
+};
+
+// Build the Sanity patch mutations for one document from a buildPatchSets
+// result. Existing-item updates collapse into a single `set` patch; each
+// missing language item becomes its own append (`setIfMissing` guards the array
+// in the rare case the whole field is absent, then `insert` after the last
+// element). All mutations target the same doc and apply in one transaction.
+export const buildMutations = (
+  id: string,
+  sets: Record<string, unknown>,
+  inserts: PatchInsert[]
+): import('./sanity').SanityMutation[] => {
+  const mutations: import('./sanity').SanityMutation[] = [];
+  if (Object.keys(sets).length > 0) {
+    mutations.push({ patch: { id, set: sets } });
+  }
+  for (const ins of inserts) {
+    mutations.push({
+      patch: {
+        id,
+        setIfMissing: { [ins.fieldPath]: [] },
+        insert: { after: `${ins.fieldPath}[-1]`, items: [ins.item] },
+      },
+    });
+  }
+  return mutations;
 };

@@ -9,6 +9,7 @@ import {
 import { buildDetailProjection } from '@/lib/translatable-fields';
 import { translate, TranslatorError } from '@/lib/translator';
 import {
+  buildMutations,
   buildPatchSets,
   collectItems,
   getConfig,
@@ -250,7 +251,7 @@ export async function POST(req: Request) {
         type Usage = BulkResponse['usage'];
         type PerPendingResult = {
           result: DocResult;
-          mutation: SanityMutation | null;
+          mutations: SanityMutation[];
           usage: Usage | null;
         };
 
@@ -268,7 +269,7 @@ export async function POST(req: Request) {
                 itemsRequested: 0,
                 missingFromResponse: [],
               },
-              mutation: null,
+              mutations: [],
               usage: null,
             };
           }
@@ -277,7 +278,7 @@ export async function POST(req: Request) {
               items.map(({ key, kind, source }) => ({ key, kind, source })),
               p.target as Exclude<LangCode, 'en'>
             );
-            const { sets, missingFromResponse } = buildPatchSets(
+            const { sets, inserts, missingFromResponse } = buildPatchSets(
               items,
               portableTextFields,
               tr.translations,
@@ -289,7 +290,7 @@ export async function POST(req: Request) {
               cacheReadTokens: tr.usage.cacheReadTokens,
               cacheCreationTokens: tr.usage.cacheCreationTokens,
             };
-            if (Object.keys(sets).length === 0) {
+            if (Object.keys(sets).length === 0 && inserts.length === 0) {
               return {
                 result: {
                   docId: p.resolved._id,
@@ -301,10 +302,11 @@ export async function POST(req: Request) {
                   missingFromResponse,
                   error: 'Translator returned no usable translations',
                 },
-                mutation: null,
+                mutations: [],
                 usage: callUsage,
               };
             }
+            const fieldsWritten = Object.keys(sets).length + inserts.length;
             sets['translationMeta.lastTranslatedAt'] = new Date().toISOString();
             sets['translationMeta.targetLanguage'] = p.target;
             return {
@@ -313,11 +315,11 @@ export async function POST(req: Request) {
                 baseId: p.resolved.baseId,
                 target: p.target,
                 status: 'translated',
-                fieldsSet: Object.keys(sets).length,
+                fieldsSet: fieldsWritten,
                 itemsRequested: items.length,
                 missingFromResponse,
               },
-              mutation: { patch: { id: p.resolved._id, set: sets } },
+              mutations: buildMutations(p.resolved._id, sets, inserts),
               usage: callUsage,
             };
           } catch (err) {
@@ -333,7 +335,7 @@ export async function POST(req: Request) {
                 missingFromResponse: [],
                 error: message,
               },
-              mutation: null,
+              mutations: [],
               usage: null,
             };
           }
@@ -376,7 +378,7 @@ export async function POST(req: Request) {
 
         for (const pr of perResults) {
           results.push(pr.result);
-          if (pr.mutation) mutations.push(pr.mutation);
+          if (pr.mutations.length > 0) mutations.push(...pr.mutations);
           if (pr.usage) {
             usage.inputTokens += pr.usage.inputTokens;
             usage.outputTokens += pr.usage.outputTokens;

@@ -155,9 +155,15 @@ export const SANITY_TYPES: Record<string, SanityTypeConfig> = {
           { path: 'text', kind: 'text' },
         ],
       },
-    ],
-    i18nArrays: [
-      { path: 'tags', groupLabel: 'Tags', kind: 'string' },
+      // tags[] is an array of `tag` objects; each tag's translatable text lives
+      // in `value`, itself an internationalized array. So it's a nested array
+      // with a single i18n leaf field (`value`), not a direct i18n array.
+      {
+        path: 'tags',
+        groupLabel: 'Tags',
+        itemLabelPath: 'value',
+        subFields: [{ path: 'value', kind: 'string' }],
+      },
     ],
     filter: '',
   },
@@ -228,13 +234,18 @@ export const SANITY_TYPES: Record<string, SanityTypeConfig> = {
 export const aliasFor = (path: string, lang: string): string =>
   `${path.replace(/->/g, '_').replace(/\./g, '_')}_${lang}`;
 
+// Alias for the projected list of existing language `_key`s of an i18n-array
+// field (e.g. ["en", "de"]). Write logic uses this to decide set vs. insert.
+export const keysAlias = (path: string): string => aliasFor(path, 'keys');
+
 // List endpoint: only needs counts for portable text — keeps payload small across many docs.
 export const buildListProjection = (fields: TranslatableField[]): string => {
   const lines: string[] = ['_id', '_updatedAt'];
   for (const f of fields) {
     for (const lang of LANG_CODES) {
       const alias = aliasFor(f.path, lang);
-      const src = `${f.path}.${lang}`;
+      // Internationalized-array shape: read the lang item's `.value`.
+      const src = `${f.path}[_key=="${lang}"][0].value`;
       lines.push(f.kind === 'portableText' ? `"${alias}": count(${src})` : `"${alias}": ${src}`);
     }
   }
@@ -251,15 +262,17 @@ const buildItemLines = (
   const lines: string[] = [];
   for (const f of fields ?? []) {
     for (const lang of LANG_CODES) {
-      lines.push(`"${aliasFor(f.path, lang)}": ${f.path}.${lang}`);
+      lines.push(`"${aliasFor(f.path, lang)}": ${f.path}[_key=="${lang}"][0].value`);
     }
+    lines.push(`"${keysAlias(f.path)}": ${f.path}[]._key`);
   }
   for (const group of nestedArrays ?? []) {
     const sub: string[] = ['_key', '_type'];
     for (const s of group.subFields) {
       for (const lang of LANG_CODES) {
-        sub.push(`"${aliasFor(s.path, lang)}": ${s.path}.${lang}`);
+        sub.push(`"${aliasFor(s.path, lang)}": ${s.path}[_key=="${lang}"][0].value`);
       }
+      sub.push(`"${keysAlias(s.path)}": ${s.path}[]._key`);
     }
     lines.push(`"${group.path}": ${group.path}[]{ ${sub.join(', ')} }`);
   }

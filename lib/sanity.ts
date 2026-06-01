@@ -63,7 +63,14 @@ export async function sanityQuery<T>(
 }
 
 export type SanityMutation =
-  | { patch: { id: string; set?: Record<string, unknown>; setIfMissing?: Record<string, unknown> } }
+  | {
+      patch: {
+        id: string;
+        set?: Record<string, unknown>;
+        setIfMissing?: Record<string, unknown>;
+        insert?: { before?: string; after?: string; replace?: string; items: unknown[] };
+      };
+    }
   | { create: Record<string, unknown> }
   | { delete: { id: string } };
 
