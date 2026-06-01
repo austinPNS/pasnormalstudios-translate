@@ -38,6 +38,10 @@ interface Props {
 
 export const DocumentsScreen = ({ layout, docs, loading, error, onOpenDoc, onBulk, filter, setFilter, search, setSearch }: Props) => {
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  // 'all' keeps the default "any language missing" view; a lang code narrows
+  // the list to docs where that target is not yet started (status 'none').
+  const [missingLang, setMissingLang] = useState<'all' | LangCode>('all');
+  const targetLangs = LANGS.filter((l) => !l.source);
 
   const toggle = (id: string) => {
     const n = new Set(selected);
@@ -51,8 +55,13 @@ export const DocumentsScreen = ({ layout, docs, loading, error, onOpenDoc, onBul
 
   const filtered = docs.filter((d) => {
     if (search && !d.title.toLowerCase().includes(search.toLowerCase())) return false;
-    if (!Object.values(d.langs).some((l) => l.status === 'none')) return false;
-    return d.type === filter;
+    if (d.type !== filter) return false;
+    if (missingLang === 'all') {
+      // Default view: any non-source language still missing.
+      return Object.values(d.langs).some((l) => l.status === 'none');
+    }
+    // Narrowed view: this specific target is not yet started.
+    return d.langs[missingLang].status === 'none';
   });
 
   return (
@@ -88,6 +97,17 @@ export const DocumentsScreen = ({ layout, docs, loading, error, onOpenDoc, onBul
               { v: 'feature', label: 'Product Feature' },
               { v: 'frontpage', label: 'Front page' },
               { v: 'hero', label: 'Hero' },
+            ]}
+          />
+          <Seg<'all' | LangCode>
+            value={missingLang}
+            onChange={setMissingLang}
+            options={[
+              { v: 'all', label: 'All missing' },
+              ...targetLangs.map((l) => ({
+                v: l.code,
+                label: `Missing ${l.code.toUpperCase()}`,
+              })),
             ]}
           />
         </div>
